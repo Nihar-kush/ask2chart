@@ -1,0 +1,19 @@
+import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
+import { queryDuckDB } from "@/lib/duckdb/query";
+import type { AnalysisResult, CompiledAnalysis } from "@/types/analysis";
+
+export async function runAnalysis(
+  engine: DuckDBEngine,
+  analysis: CompiledAnalysis,
+): Promise<AnalysisResult> {
+  const start = performance.now();
+  const table = await queryDuckDB(engine, analysis.sql, analysis.parameters);
+  const queryDurationMs = performance.now() - start;
+
+  const rows = table.toArray().map((row) => ({
+    group: String(row.group_label),
+    value: row.metric_text == null ? null : String(row.metric_text),
+  }));
+
+  return { ...analysis, rows, queryDurationMs };
+}

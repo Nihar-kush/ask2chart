@@ -1,4 +1,5 @@
 import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
+import { queryDuckDB, quoteIdentifier } from "@/lib/duckdb/query";
 import type {
   Dataset,
   DatasetFilter,
@@ -7,7 +8,7 @@ import type {
 } from "@/types/dataset";
 
 function quoteColumn(name: string) {
-  return `dataset."${name.replaceAll('"', '""')}"`;
+  return `dataset.${quoteIdentifier(name)}`;
 }
 
 function whereClause(filter: DatasetFilter | null) {
@@ -16,31 +17,14 @@ function whereClause(filter: DatasetFilter | null) {
     : "";
 }
 
-function query(
-  engine: DuckDBEngine,
-  sql: string,
-  filter: DatasetFilter | null,
-) {
-  return engine.withConnection(async (connection, database) => {
-    if (!filter) return connection.query(sql);
-
-    const statement = await connection.prepare(sql);
-    try {
-      return await statement.query(filter.text);
-    } finally {
-      if (!database.isDetached()) await statement.close();
-    }
-  });
-}
-
 export async function getFilteredRowCount(
   engine: DuckDBEngine,
   filter: DatasetFilter,
 ) {
-  const result = await query(
+  const result = await queryDuckDB(
     engine,
     `SELECT count(*) AS row_count FROM dataset ${whereClause(filter)}`,
-    filter,
+    [filter.text],
   );
   return Number(result.get(0)?.row_count ?? 0);
 }
@@ -61,13 +45,13 @@ export async function getDatasetRows(
     ? `${quoteColumn(sort.column)} ${sort.direction} NULLS LAST, ${rowId}`
     : rowId;
 
-  const result = await query(
+  const result = await queryDuckDB(
     engine,
     `SELECT ${rowId}, ${columns.join(", ")}
       FROM dataset ${whereClause(filter)}
       ORDER BY ${order}
       LIMIT ${limit} OFFSET ${offset}`,
-    filter,
+    filter ? [filter.text] : [],
   );
 
   const ids = result.getChildAt(0);

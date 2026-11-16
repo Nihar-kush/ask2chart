@@ -23,6 +23,9 @@ export function WorkspaceLayout() {
           <NavLink to="datasets" className={navLinkClass}>
             Data Explorer
           </NavLink>
+          <NavLink to="charts" className={navLinkClass}>
+            Charts
+          </NavLink>
         </nav>
       </aside>
       <main className="min-w-0 flex-1 px-6 py-8 md:px-8">
