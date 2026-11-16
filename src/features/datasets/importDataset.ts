@@ -1,20 +1,13 @@
 import { DuckDBDataProtocol } from "@duckdb/duckdb-wasm";
 import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
+import type { Dataset } from "@/types/dataset";
 
-const previewRowLimit = 50;
-
-export type DatasetPreview = {
-  name: string;
-  rowCount: number;
-  columns: { name: string; type: string }[];
-  rows: (string | null)[][];
-  importDurationMs: number;
-};
+let nextDatasetId = 0;
 
 export async function importDataset(
   engine: DuckDBEngine,
   file: File,
-): Promise<DatasetPreview> {
+): Promise<Dataset> {
   if (!file.name.toLowerCase().endsWith(".csv")) {
     throw new Error("Choose a file with a .csv extension.");
   }
@@ -37,7 +30,8 @@ export async function importDataset(
     let importDurationMs: number;
     try {
       await connection.query(
-        "CREATE OR REPLACE TABLE dataset AS SELECT * FROM read_csv('dataset.csv')",
+        "CREATE OR REPLACE TABLE dataset AS " +
+          "SELECT *, row_number() OVER () AS __ask2chart_row_id FROM read_csv('dataset.csv')",
       );
       importDurationMs = performance.now() - importStartedAt;
     } finally {
@@ -50,28 +44,21 @@ export async function importDataset(
     const count = await connection.query(
       "SELECT count(*) AS row_count FROM dataset",
     );
-    // Cast only the preview so dates and large integers display as DuckDB formats them.
-    const sample = await connection.query(
-      `SELECT COLUMNS(*)::VARCHAR FROM dataset LIMIT ${previewRowLimit}`,
-    );
     const columns = schema.toArray().map((column) => ({
       name: String(column.column_name),
       type: String(column.column_type),
     }));
-    const vectors = columns.map((_, index) => sample.getChildAt(index));
-    const rows = Array.from({ length: sample.numRows }, (_, index) =>
-      vectors.map((vector) => {
-        const value = vector?.get(index);
-        return value == null ? null : String(value);
-      }),
-    );
+    // DuckDB renames the last column if a CSV header already uses this name.
+    const rowIdColumn = columns.pop();
+    if (!rowIdColumn) throw new Error("Could not read the dataset schema.");
 
     await connection.query("COMMIT");
     return {
+      id: ++nextDatasetId,
       name: file.name,
       rowCount: Number(count.get(0)?.row_count ?? 0),
       columns,
-      rows,
+      rowIdColumn: rowIdColumn.name,
       importDurationMs,
     };
   });

@@ -1,18 +1,18 @@
 import { useRef } from "react";
 import { useOutletContext } from "react-router";
 import { Button } from "@/components/ui/button";
-import type { WorkspaceDataset } from "@/features/workspace/useWorkspaceDataset";
-import { DatasetPreviewTable } from "./DatasetPreviewTable";
+import type { WorkspaceDataset } from "@/types/dataset";
+import { DatasetExplorer } from "./DatasetExplorer";
 
 export function DatasetsPage() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const { importingFile, preview, error, openFile, openSample } =
+  const { engine, importingFile, dataset, error, openFile, openSample } =
     useOutletContext<WorkspaceDataset>();
 
   const status = importingFile
     ? `Importing ${importingFile.name}…`
-    : preview
-      ? `Loaded ${preview.name} with ${preview.rowCount.toLocaleString()} rows.`
+    : dataset
+      ? `Loaded ${dataset.name} with ${dataset.rowCount.toLocaleString()} rows.`
       : "No dataset loaded.";
 
   return (
@@ -23,7 +23,7 @@ export function DatasetsPage() {
             Data Explorer
           </h1>
           <p className="text-sm text-muted-foreground">
-            Open a CSV to preview it in your browser.
+            Open a CSV to browse, sort, and filter it in your browser.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -58,7 +58,7 @@ export function DatasetsPage() {
       <p
         role="status"
         className={
-          !importingFile && preview
+          !importingFile && dataset
             ? "sr-only"
             : "text-sm text-muted-foreground"
         }
@@ -74,7 +74,9 @@ export function DatasetsPage() {
           {error}
         </p>
       )}
-      {!importingFile && preview && <DatasetPreviewTable preview={preview} />}
+      {!importingFile && dataset && (
+        <DatasetExplorer key={dataset.id} dataset={dataset} engine={engine} />
+      )}
     </div>
   );
 }

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
-import type { DatasetPreview } from "@/features/datasets/importDataset";
+import type { Dataset, WorkspaceDataset } from "@/types/dataset";
 import sampleSales from "@/features/datasets/sample-sales.csv?raw";
 import { createDuckDB } from "@/lib/duckdb/createDuckDB";
 
 type ImportResult = {
-  preview: DatasetPreview | null;
+  dataset: Dataset | null;
   error: string | null;
 };
 
@@ -13,14 +13,14 @@ function createSampleFile() {
   return new File([sampleSales], "sample-sales.csv", { type: "text/csv" });
 }
 
-export function useWorkspaceDataset() {
+export function useWorkspaceDataset(): WorkspaceDataset {
   const [searchParams, setSearchParams] = useSearchParams();
   const [importingFile, setImportingFile] = useState<File | null>(() =>
     searchParams.get("sample") === "1" ? createSampleFile() : null,
   );
   const [result, setResult] = useState<ImportResult | null>(null);
   const [engine] = useState(() =>
-    createDuckDB((error) => setResult({ preview: null, error: error.message })),
+    createDuckDB((error) => setResult({ dataset: null, error: error.message })),
   );
 
   useEffect(() => () => engine.dispose(), [engine]);
@@ -36,8 +36,8 @@ export function useWorkspaceDataset() {
           await import("@/features/datasets/importDataset");
         if (!isCurrent) return;
 
-        const preview = await importDataset(engine, file);
-        if (isCurrent) setResult({ preview, error: null });
+        const dataset = await importDataset(engine, file);
+        if (isCurrent) setResult({ dataset, error: null });
       } catch (error) {
         if (!isCurrent) return;
 
@@ -46,7 +46,7 @@ export function useWorkspaceDataset() {
             ? error.message
             : "Try opening the file again.";
         setResult((previous) => ({
-          preview: previous?.preview ?? null,
+          dataset: previous?.dataset ?? null,
           error: message.split("\n", 1)[0],
         }));
       } finally {
@@ -74,11 +74,9 @@ export function useWorkspaceDataset() {
   return {
     engine,
     importingFile,
-    preview: result?.preview ?? null,
+    dataset: result?.dataset ?? null,
     error: importingFile ? null : (result?.error ?? null),
     openFile,
     openSample: () => openFile(createSampleFile()),
   };
 }
-
-export type WorkspaceDataset = ReturnType<typeof useWorkspaceDataset>;
