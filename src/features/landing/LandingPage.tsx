@@ -28,6 +28,12 @@ export function LandingPage() {
           Ask questions about a dataset, see the answers in charts, and inspect
           how each result was calculated.
         </p>
+        <Link
+          to="/workspace/datasets?sample=1"
+          className="justify-self-start text-sm font-medium underline underline-offset-4"
+        >
+          Try sample data
+        </Link>
       </main>
     </>
   );

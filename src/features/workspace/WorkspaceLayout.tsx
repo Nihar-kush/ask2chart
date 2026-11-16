@@ -1,9 +1,12 @@
 import { Link, NavLink, Outlet } from "react-router";
+import { useWorkspaceDataset } from "./useWorkspaceDataset";
 
 const navLinkClass =
   "rounded-md px-3 py-2 text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 aria-[current=page]:bg-muted aria-[current=page]:font-medium";
 
 export function WorkspaceLayout() {
+  const dataset = useWorkspaceDataset();
+
   return (
     <div className="min-h-dvh md:flex">
       <aside className="border-b px-4 py-5 md:w-56 md:shrink-0 md:border-r md:border-b-0">
@@ -23,7 +26,7 @@ export function WorkspaceLayout() {
         </nav>
       </aside>
       <main className="min-w-0 flex-1 px-6 py-8 md:px-8">
-        <Outlet />
+        <Outlet context={dataset} />
       </main>
     </div>
   );

@@ -2,25 +2,14 @@ import { Link, Route, Routes } from "react-router";
 import { DatasetsPage } from "@/features/datasets/DatasetsPage";
 import { LandingPage } from "@/features/landing/LandingPage";
 import { WorkspaceLayout } from "@/features/workspace/WorkspaceLayout";
+import { WorkspaceOverview } from "@/features/workspace/WorkspaceOverview";
 
 function App() {
   return (
     <Routes>
       <Route index element={<LandingPage />} />
       <Route path="workspace" element={<WorkspaceLayout />}>
-        <Route
-          index
-          element={
-            <>
-              <h1 className="text-2xl font-semibold tracking-tight">
-                Workspace
-              </h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                No dataset selected.
-              </p>
-            </>
-          }
-        />
+        <Route index element={<WorkspaceOverview />} />
         <Route path="datasets" element={<DatasetsPage />} />
       </Route>
       <Route
