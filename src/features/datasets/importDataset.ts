@@ -16,7 +16,7 @@ export async function importDataset(
   }
 
   return engine.withConnection(async (connection, database) => {
-    // Closing the connection rolls back the replacement if it fails before COMMIT.
+    // Closing the connection rolls back a failed import and keeps the previous dataset
     await connection.query("BEGIN TRANSACTION");
 
     const importStartedAt = performance.now();
@@ -48,7 +48,8 @@ export async function importDataset(
       name: String(column.column_name),
       type: String(column.column_type),
     }));
-    // DuckDB renames the last column if a CSV header already uses this name.
+    // The last column is our row ID even if DuckDB renames it
+    // because a CSV header already uses that name
     const rowIdColumn = columns.pop();
     if (!rowIdColumn) throw new Error("Could not read the dataset schema.");
 

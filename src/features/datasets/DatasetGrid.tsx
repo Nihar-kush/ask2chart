@@ -62,7 +62,7 @@ export function DatasetGrid({ dataset, engine, filter }: DatasetGridProps) {
     [dataset],
   );
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- Keep the mutable virtualizer local to this grid.
+  // eslint-disable-next-line react-hooks/incompatible-library -- The grid reads the current virtualizer state on each render
   const virtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => scrollRef.current,

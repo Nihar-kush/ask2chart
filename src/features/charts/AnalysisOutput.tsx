@@ -31,7 +31,7 @@ export function AnalysisOutput({
   );
 
   return (
-    <section aria-labelledby={titleId} className="grid min-w-0 gap-4">
+    <section aria-labelledby={titleId} className="@container grid min-w-0 gap-4">
       <div className="grid gap-1">
         <h2 id={titleId} className="text-lg font-semibold tracking-tight">
           {title}
@@ -48,7 +48,7 @@ export function AnalysisOutput({
           This analysis returned no groups.
         </p>
       ) : (
-        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(15rem,1fr)]">
+        <div className="grid min-w-0 gap-4 @3xl:grid-cols-[minmax(0,2fr)_minmax(15rem,1fr)]">
           <div className="min-w-0 rounded-xl border bg-card p-2">
             {hasChartValues ? (
               <Suspense

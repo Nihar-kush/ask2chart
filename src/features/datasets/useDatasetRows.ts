@@ -90,7 +90,7 @@ export function useDatasetRows(
 ) {
   const [result, setResult] = useState<RowWindow | null>(null);
 
-  // Keep a block on either side of the visible range ready for scrolling.
+  // Buffer rows on both sides so small scrolls can reuse the rows we already fetched
   const offset = Math.max(
     0,
     (Math.floor(firstIndex / rowsPerBlock) - 1) * rowsPerBlock,
@@ -104,7 +104,7 @@ export function useDatasetRows(
     let isCurrent = true;
     const request = { filter, sort, attempt, offset, limit };
 
-    // Skip ranges that pass through the viewport during a quick scroll.
+    // Wait briefly so fast scrolling skips unnecessary queries
     const timer = window.setTimeout(async () => {
       try {
         const rows = await getDatasetRows(

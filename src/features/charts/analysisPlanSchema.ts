@@ -5,7 +5,7 @@ export const analysisPlanSchema = z.strictObject({
     column: z.string().min(1),
     bucket: z.enum(["value", "month"]),
   }),
-  metric: z.discriminatedUnion("aggregation", [
+  metric: z.union([
     z.strictObject({ aggregation: z.literal("count") }),
     z.strictObject({
       aggregation: z.enum(["sum", "avg"]),

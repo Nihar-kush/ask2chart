@@ -62,9 +62,12 @@ export default function AnalysisChart({
     const borderColor = style.getPropertyValue("--border").trim();
     const seriesColor = style.getPropertyValue("--chart-3").trim();
 
+    const isMonthly = type === "line";
     const source = rows.map(({ group, value }) => {
       const number = value === null ? NaN : Number(value);
-      return [group, Number.isFinite(number) ? number : null];
+      // Use UTC month starts so the distance between points shows elapsed time
+      const x = isMonthly ? Date.parse(`${group}-01T00:00:00Z`) : group;
+      return [x, Number.isFinite(number) ? number : null, group];
     });
 
     chart.setOption(
@@ -72,7 +75,8 @@ export default function AnalysisChart({
         animation: false,
         color: [seriesColor],
         textStyle: { fontFamily: style.fontFamily },
-        dataset: { dimensions: ["group", "value"], source },
+        useUTC: true,
+        dataset: { dimensions: ["x", "value", "group"], source },
         grid: { left: 64, right: 20, top: 18, bottom: 36 },
         tooltip: {
           trigger: "axis",
@@ -83,11 +87,12 @@ export default function AnalysisChart({
           textStyle: { color: style.color },
         },
         xAxis: {
-          type: "category",
+          type: isMonthly ? "time" : "category",
           axisTick: { show: false },
           axisLine: { lineStyle: { color: borderColor } },
           axisLabel: {
             color: axisColor,
+            formatter: isMonthly ? "{yyyy}-{MM}" : undefined,
             hideOverlap: true,
             overflow: "truncate",
             width: 100,
@@ -107,7 +112,7 @@ export default function AnalysisChart({
             name: metric,
             type,
             encode: {
-              x: "group",
+              x: "x",
               y: "value",
               itemName: "group",
               tooltip: ["value"],
@@ -116,7 +121,7 @@ export default function AnalysisChart({
             symbolSize: 7,
             lineStyle: { width: 2 },
             emphasis: {
-              // ZRender cannot derive an emphasis color from our OKLCH tokens.
+              // Set the hover color explicitly because ECharts can hide bars and lines with OKLCH
               itemStyle: { color: style.color, borderColor: style.color },
               lineStyle: { color: style.color },
             },

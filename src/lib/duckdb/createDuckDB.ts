@@ -22,7 +22,7 @@ export function createDuckDB(onFailure: (error: Error) => void) {
     const { AsyncDuckDB, getJsDelivrBundles, selectBundle, VoidLogger } =
       await import("@duckdb/duckdb-wasm");
 
-    // The version-matched Wasm files exceed Cloudflare's static asset size limit.
+    // Load Wasm from the CDN because the files exceed Cloudflare's asset size limit
     const { mvp, eh } = getJsDelivrBundles();
     const bundle = await selectBundle({
       mvp: { ...mvp, mainWorker: mvpWorkerUrl },
@@ -110,7 +110,8 @@ export function createDuckDB(onFailure: (error: Error) => void) {
       }
     }
 
-    // A terminated DuckDB worker can leave an outstanding RPC promise pending.
+    // If the DuckDB worker stops mid-request, it may never send a reply
+    // Race the request against shutdown so the caller stops waiting
     let onAbort: (() => void) | undefined;
     const stopped = new Promise<never>((_, reject) => {
       onAbort = () => reject(signal.reason);

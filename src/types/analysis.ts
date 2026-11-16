@@ -1,4 +1,8 @@
 import type { z } from "zod";
+import type {
+  analysisConversationSchema,
+  analysisReplySchema,
+} from "@/features/charts/analysisApiSchema";
 import type { analysisPlanSchema } from "@/features/charts/analysisPlanSchema";
 import type { SqlParameter } from "@/lib/duckdb/query";
 
@@ -18,4 +22,14 @@ export type AnalysisRow = {
 export type AnalysisResult = CompiledAnalysis & {
   rows: AnalysisRow[];
   queryDurationMs: number;
+};
+
+export type AnalysisConversation = z.infer<typeof analysisConversationSchema>;
+
+export type PendingClarification = {
+  conversation: AnalysisConversation;
+  reply: Extract<
+    z.infer<typeof analysisReplySchema>["result"],
+    { kind: "clarification" }
+  >;
 };
