@@ -1,4 +1,12 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
 import type {
@@ -15,6 +23,8 @@ import { compileAnalysisPlan } from "./compileAnalysisPlan";
 import { requestAnalysis } from "./requestAnalysis";
 import { runAnalysis } from "./runAnalysis";
 import { AskAnalysisForm } from "./AskAnalysisForm";
+
+const ResultExplanation = lazy(() => import("./ResultExplanation"));
 
 type AnalysisTask =
   | { source: "ai"; conversation: AnalysisConversation }
@@ -40,6 +50,8 @@ export function DatasetAnalysis({
   const [status, setStatus] = useState<AnalysisStatus | null>(null);
   const [followUp, setFollowUp] = useState<PendingClarification | null>(null);
   const [output, setOutput] = useState<{
+    version: number;
+    question: string | null;
     title: string;
     result: AnalysisResult;
   } | null>(null);
@@ -118,7 +130,12 @@ export function DatasetAnalysis({
       setStatus({ source, phase });
       const result = await runAnalysis(engine, compiled);
       signal.throwIfAborted();
-      setOutput({ title, result });
+      setOutput((previous) => ({
+        version: (previous?.version ?? 0) + 1,
+        question: task.source === "ai" ? task.conversation.question : null,
+        title,
+        result,
+      }));
       if (source === "ai") setFollowUp(null);
       setStatus(source === "ai" ? { source, phase: "done" } : null);
     } catch (error) {
@@ -186,7 +203,7 @@ export function DatasetAnalysis({
           id={assistantId}
           hidden={!isAssistantOpen}
           aria-label="Ask2Chart Assistant"
-          className="xl:order-last"
+          className="min-w-0 space-y-4 xl:order-last"
         >
           <AskAnalysisForm
             key={followUp?.conversation.clarifications.length ?? "question"}
@@ -213,6 +230,17 @@ export function DatasetAnalysis({
               ) : null
             }
           />
+          {output && output.result.rows.length > 0 && (
+            <Suspense fallback={null}>
+              <ResultExplanation
+                key={output.version}
+                title={output.title}
+                question={output.question}
+                result={output.result}
+                disabled={busy}
+              />
+            </Suspense>
+          )}
         </aside>
 
         <div className="grid min-w-0 gap-5">

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useId } from "react";
 import { ChevronDown } from "lucide-react";
 import type { AnalysisResult } from "@/types/analysis";
+import { getAnalysisLabels } from "./analysisLabels";
 
 const AnalysisChart = lazy(() => import("./AnalysisChart"));
 
@@ -20,18 +21,17 @@ export function AnalysisOutput({
   const titleId = useId();
   const { plan, rows, queryDurationMs, sql, parameters } = result;
   const { groupBy, metric, filters } = plan;
-  const groupLabel = groupBy.bucket === "month" ? "Month" : groupBy.column;
-  const metricLabel =
-    metric.aggregation === "count"
-      ? "Row count"
-      : `${metric.aggregation === "sum" ? "Total" : "Average"} ${metric.column}`;
+  const { groupLabel, metricLabel } = getAnalysisLabels(plan);
 
   const hasChartValues = rows.some(
     ({ value }) => value !== null && Number.isFinite(Number(value)),
   );
 
   return (
-    <section aria-labelledby={titleId} className="@container grid min-w-0 gap-4">
+    <section
+      aria-labelledby={titleId}
+      className="@container grid min-w-0 gap-4"
+    >
       <div className="grid gap-1">
         <h2 id={titleId} className="text-lg font-semibold tracking-tight">
           {title}

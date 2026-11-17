@@ -4,6 +4,7 @@ import type {
   analysisReplySchema,
 } from "@/features/charts/analysisApiSchema";
 import type { analysisPlanSchema } from "@/features/charts/analysisPlanSchema";
+import type { explanationRequestSchema } from "@/features/charts/explanationSchema";
 import type { SqlParameter } from "@/lib/duckdb/query";
 
 export type AnalysisPlan = z.infer<typeof analysisPlanSchema>;
@@ -33,3 +34,5 @@ export type PendingClarification = {
     { kind: "clarification" }
   >;
 };
+
+export type ExplanationRequest = z.infer<typeof explanationRequestSchema>;
