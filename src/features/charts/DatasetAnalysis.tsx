@@ -7,11 +7,14 @@ import {
   useRef,
   useState,
 } from "react";
+import { ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SelectField } from "@/components/ui/SelectField";
 import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
 import { saveAnalysis } from "@/lib/workspaceDb";
 import type {
   AnalysisConversation,
+  AnalysisPlan,
   AnalysisResult,
   CompiledAnalysis,
   PendingClarification,
@@ -26,12 +29,13 @@ import { requestAnalysis } from "./requestAnalysis";
 import { runAnalysis } from "./runAnalysis";
 import { AskAnalysisForm } from "./AskAnalysisForm";
 import { RecentAnalyses } from "./RecentAnalyses";
+import { ManualChartForm } from "./ManualChartForm";
 
 const ResultExplanation = lazy(() => import("./ResultExplanation"));
 
 type AnalysisTask =
   | { source: "ai"; conversation: AnalysisConversation }
-  | { source: "preset"; title: string; compiled: CompiledAnalysis }
+  | { source: "preset" | "manual"; title: string; compiled: CompiledAnalysis }
   | { source: "saved"; analysis: SavedAnalysis };
 
 type AnalysisStatus = { source: AnalysisTask["source"] } & (
@@ -46,16 +50,25 @@ export function DatasetAnalysis({
   dataset: Dataset;
   engine: DuckDBEngine;
 }) {
-  const presetId = useId();
+  const builderId = useId();
   const assistantId = useId();
   const resultId = useId();
   const request = useRef<AbortController | null>(null);
-  const [isAssistantOpen, setIsAssistantOpen] = useState(true);
+  const builderRef = useRef<HTMLButtonElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const assistantRef = useRef<HTMLElement>(null);
+  const [editing, setEditing] = useState<{
+    revision: number;
+    title: string;
+    plan: AnalysisPlan;
+  }>();
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [status, setStatus] = useState<AnalysisStatus | null>(null);
   const [saveWarning, setSaveWarning] = useState(false);
   const [followUp, setFollowUp] = useState<PendingClarification | null>(null);
   const [output, setOutput] = useState<{
     version: number;
+    source: AnalysisTask["source"];
     question: string | null;
     title: string;
     result: AnalysisResult;
@@ -79,10 +92,15 @@ export function DatasetAnalysis({
     presets.findIndex((preset) => preset.compiled),
   );
   const preset = presets[selection];
+  const [isBuilderOpen, setIsBuilderOpen] = useState(!preset);
   const busy = status?.phase === "planning" || status?.phase === "running";
   const assistantStatus = status?.source === "ai" ? status : null;
 
   useEffect(() => () => request.current?.abort(), []);
+
+  useEffect(() => {
+    if (output && output.source !== "ai") resultRef.current?.focus();
+  }, [output]);
 
   async function analyze(task: AnalysisTask) {
     if (
@@ -149,6 +167,7 @@ export function DatasetAnalysis({
       signal.throwIfAborted();
       setOutput((previous) => ({
         version: (previous?.version ?? 0) + 1,
+        source,
         question,
         title,
         result,
@@ -209,34 +228,174 @@ export function DatasetAnalysis({
   }
 
   return (
-    <div className="grid min-w-0 gap-4">
+    <div className="grid min-w-0 gap-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="min-w-0 wrap-break-word text-sm">
           <span className="text-muted-foreground">Active dataset </span>
           <strong className="font-medium">{dataset.name}</strong>
         </p>
         <Button
-          variant="outline"
+          type="button"
+          variant={isAssistantOpen ? "outline" : "default"}
+          size="lg"
+          className="gap-2 px-3.5"
           aria-expanded={isAssistantOpen}
           aria-controls={assistantId}
-          onClick={() => setIsAssistantOpen((open) => !open)}
+          onClick={() => {
+            setIsAssistantOpen(!isAssistantOpen);
+            if (!isAssistantOpen) {
+              requestAnimationFrame(() => assistantRef.current?.focus());
+            }
+          }}
         >
-          {isAssistantOpen ? "Hide assistant" : "Show assistant"}
+          {!isAssistantOpen && <Sparkles aria-hidden="true" />}
+          {isAssistantOpen ? "Hide assistant" : "Ask AI"}
         </Button>
       </div>
 
       <div
         className={
           isAssistantOpen
-            ? "grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]"
-            : "grid min-w-0 gap-4"
+            ? "grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]"
+            : "grid min-w-0 gap-5"
         }
       >
+        <div className="grid min-w-0 gap-5">
+          {preset && (
+            <section
+              className="grid gap-3 rounded-xl border p-4"
+              aria-label="Local analysis presets"
+            >
+              <form
+                className="grid gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (preset.compiled) {
+                    void analyze({
+                      source: "preset",
+                      title: preset.title,
+                      compiled: preset.compiled,
+                    });
+                  }
+                }}
+              >
+                <div className="grid items-end gap-2 sm:grid-cols-[minmax(0,21rem)_auto] sm:justify-start">
+                  <SelectField
+                    label="Analysis preset"
+                    value={String(selection)}
+                    disabled={busy}
+                    options={presets.map(({ title, compiled }, index) => ({
+                      value: String(index),
+                      label: title,
+                      disabled: !compiled,
+                    }))}
+                    onChange={(value) => {
+                      setSelection(Number(value));
+                      if (status?.source === "preset") setStatus(null);
+                    }}
+                  />
+                  <Button
+                    type="submit"
+                    className="h-9 justify-self-start"
+                    disabled={busy}
+                  >
+                    Run analysis
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {preset.description}
+                </p>
+              </form>
+              {status?.source === "preset" && (
+                <AnalysisStatusMessage status={status} />
+              )}
+            </section>
+          )}
+
+          {output && (
+            <div
+              ref={resultRef}
+              id={resultId}
+              tabIndex={-1}
+              className="min-w-0 scroll-mt-4 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              <AnalysisOutput
+                title={output.title}
+                result={output.result}
+                actions={
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      setEditing((current) => ({
+                        revision: (current?.revision ?? 0) + 1,
+                        title: output.title,
+                        plan: output.result.plan,
+                      }));
+                      setIsBuilderOpen(true);
+                      builderRef.current?.focus();
+                    }}
+                  >
+                    Edit chart
+                  </Button>
+                }
+              />
+            </div>
+          )}
+
+          <section
+            aria-label="Build a chart"
+            className="@container min-w-0 rounded-xl border"
+          >
+            <h2>
+              <button
+                ref={builderRef}
+                type="button"
+                aria-expanded={isBuilderOpen}
+                aria-controls={builderId}
+                onClick={() => setIsBuilderOpen((open) => !open)}
+                className="group flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-4 py-3 text-left text-sm font-semibold hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Build a chart
+                <ChevronDown
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-muted-foreground group-aria-expanded:rotate-180"
+                />
+              </button>
+            </h2>
+            <div id={builderId} hidden={!isBuilderOpen}>
+              <div className="grid gap-3 border-t p-4">
+                <ManualChartForm
+                  key={editing?.revision}
+                  columns={dataset.columns}
+                  initial={editing}
+                  busy={busy}
+                  onBuild={(title, compiled) =>
+                    void analyze({ source: "manual", title, compiled })
+                  }
+                />
+                {status?.source === "manual" && (
+                  <AnalysisStatusMessage status={status} />
+                )}
+              </div>
+            </div>
+          </section>
+
+          {saveWarning && (
+            <p role="status" className="text-sm text-muted-foreground">
+              The chart is ready, but its analysis could not be saved in this
+              browser.
+            </p>
+          )}
+        </div>
+
         <aside
           id={assistantId}
+          ref={assistantRef}
+          tabIndex={-1}
           hidden={!isAssistantOpen}
           aria-label="Ask2Chart Assistant"
-          className="min-w-0 space-y-4 xl:order-last"
+          className="min-w-0 space-y-4 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <AskAnalysisForm
             key={followUp?.conversation.clarifications.length ?? "question"}
@@ -275,87 +434,14 @@ export function DatasetAnalysis({
             </Suspense>
           )}
         </aside>
-
-        <div className="grid min-w-0 gap-5">
-          <section
-            className="grid gap-2 rounded-xl border p-4"
-            aria-label="Local analysis presets"
-          >
-            {preset ? (
-              <form
-                className="grid gap-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (preset.compiled) {
-                    void analyze({
-                      source: "preset",
-                      title: preset.title,
-                      compiled: preset.compiled,
-                    });
-                  }
-                }}
-              >
-                <label htmlFor={presetId} className="text-sm font-medium">
-                  Analysis preset
-                </label>
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    id={presetId}
-                    value={selection}
-                    disabled={busy}
-                    onChange={(event) => {
-                      setSelection(Number(event.target.value));
-                      if (status?.source === "preset") setStatus(null);
-                    }}
-                    className="h-8 min-w-0 rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-2"
-                  >
-                    {presets.map(({ title, compiled }, index) => (
-                      <option key={title} value={index} disabled={!compiled}>
-                        {title}
-                      </option>
-                    ))}
-                  </select>
-                  <Button type="submit" variant="outline" disabled={busy}>
-                    Run analysis
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {preset.description}
-                </p>
-              </form>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Sales presets need a numeric revenue column and either category
-                or order_date. Load the sample sales CSV to try them.
-              </p>
-            )}
-            {status?.source === "preset" && (
-              <AnalysisStatusMessage status={status} />
-            )}
-          </section>
-
-          <RecentAnalyses
-            datasetId={dataset.id}
-            disabled={busy}
-            onRun={(analysis) => void analyze({ source: "saved", analysis })}
-          />
-          {status?.source === "saved" && (
-            <AnalysisStatusMessage status={status} />
-          )}
-          {saveWarning && (
-            <p role="status" className="text-sm text-muted-foreground">
-              The chart is ready, but its analysis could not be saved in this
-              browser.
-            </p>
-          )}
-
-          {output && (
-            <div id={resultId} tabIndex={-1} className="min-w-0 scroll-mt-4">
-              <AnalysisOutput title={output.title} result={output.result} />
-            </div>
-          )}
-        </div>
       </div>
+
+      <RecentAnalyses
+        datasetId={dataset.id}
+        disabled={busy}
+        onRun={(analysis) => void analyze({ source: "saved", analysis })}
+      />
+      {status?.source === "saved" && <AnalysisStatusMessage status={status} />}
     </div>
   );
 }

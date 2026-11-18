@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const maxAnalysisFilters = 3;
+
 export const analysisPlanSchema = z.strictObject({
   groupBy: z.strictObject({
     column: z.string().min(1),
@@ -19,7 +21,7 @@ export const analysisPlanSchema = z.strictObject({
         equals: z.union([z.string(), z.number(), z.boolean()]),
       }),
     )
-    .max(3),
+    .max(maxAnalysisFilters),
   sort: z.strictObject({
     by: z.enum(["group", "metric"]),
     direction: z.enum(["asc", "desc"]),

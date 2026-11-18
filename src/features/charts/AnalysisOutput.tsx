@@ -1,4 +1,4 @@
-import { lazy, Suspense, useId } from "react";
+import { lazy, type ReactNode, Suspense, useId } from "react";
 import { ChevronDown } from "lucide-react";
 import type { AnalysisResult } from "@/types/analysis";
 import { getAnalysisLabels } from "./analysisLabels";
@@ -14,9 +14,11 @@ const durationFormat = new Intl.NumberFormat(undefined, {
 export function AnalysisOutput({
   title,
   result,
+  actions,
 }: {
   title: string;
   result: AnalysisResult;
+  actions?: ReactNode;
 }) {
   const titleId = useId();
   const { plan, rows, queryDurationMs, sql, parameters } = result;
@@ -32,15 +34,24 @@ export function AnalysisOutput({
       aria-labelledby={titleId}
       className="@container grid min-w-0 gap-4"
     >
-      <div className="grid gap-1">
-        <h2 id={titleId} className="text-lg font-semibold tracking-tight">
-          {title}
-        </h2>
-        <p role="status" className="text-sm text-muted-foreground tabular-nums">
-          {rows.length.toLocaleString()}{" "}
-          {rows.length === 1 ? "group" : "groups"}
-          {" · "}Query round trip {durationFormat.format(queryDurationMs)}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="grid min-w-0 gap-1">
+          <h2
+            id={titleId}
+            className="wrap-break-word text-lg font-semibold tracking-tight"
+          >
+            {title}
+          </h2>
+          <p
+            role="status"
+            className="text-sm text-muted-foreground tabular-nums"
+          >
+            {rows.length.toLocaleString()}{" "}
+            {rows.length === 1 ? "group" : "groups"}
+            {" · "}Query round trip {durationFormat.format(queryDurationMs)}
+          </p>
+        </div>
+        {actions}
       </div>
 
       {rows.length === 0 ? (

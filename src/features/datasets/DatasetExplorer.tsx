@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SelectField } from "@/components/ui/SelectField";
 import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
 import type { Dataset, DatasetFilter } from "@/types/dataset";
 import { DatasetGrid } from "./DatasetGrid";
@@ -11,7 +12,7 @@ const durationFormat = new Intl.NumberFormat(undefined, {
 });
 
 const fieldClass =
-  "h-8 min-w-0 rounded-lg border border-input bg-background px-3 text-sm outline-ring focus-visible:outline-2";
+  "h-9 min-w-0 rounded-lg border border-input bg-background px-3 text-sm outline-ring focus-visible:outline-2";
 
 export function DatasetExplorer({
   dataset,
@@ -50,20 +51,16 @@ export function DatasetExplorer({
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
-        <label className="grid min-w-0 gap-1 text-sm">
-          Filter column
-          <select
-            className={fieldClass + " w-44 max-w-full"}
-            value={column}
-            onChange={(event) => setColumn(event.target.value)}
-          >
-            {dataset.columns.map(({ name }) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label="Filter column"
+          className="w-44 max-w-full"
+          value={column}
+          options={dataset.columns.map(({ name }) => ({
+            value: name,
+            label: name,
+          }))}
+          onChange={setColumn}
+        />
         <label className="grid min-w-0 gap-1 text-sm">
           Contains
           <input
@@ -77,6 +74,7 @@ export function DatasetExplorer({
         <Button
           type="button"
           variant="outline"
+          className="h-9"
           disabled={!search && !filter}
           onClick={() => {
             setSearch("");

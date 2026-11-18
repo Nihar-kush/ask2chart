@@ -7,14 +7,28 @@ const integerType = /^U?(?:TINYINT|SMALLINT|INTEGER|BIGINT|HUGEINT)$/;
 const numericType = /^(FLOAT|DOUBLE|DECIMAL\(\d+,\s*\d+\))$/;
 const dateType = /^(DATE|TIMESTAMP(?:_(?:S|MS|NS)| WITH TIME ZONE)?)$/;
 
-function supportsEquality(type: string, value: SqlParameter) {
-  if (type === "VARCHAR") return typeof value === "string";
-  if (type === "BOOLEAN") return typeof value === "boolean";
-  if (typeof value !== "number") return false;
+export function isDateColumn(type: string) {
+  return dateType.test(type);
+}
 
-  return integerType.test(type)
-    ? Number.isSafeInteger(value)
-    : numericType.test(type);
+export function isNumericColumn(type: string) {
+  return integerType.test(type) || numericType.test(type);
+}
+
+export function analysisFilterKind(type: string) {
+  if (type === "VARCHAR") return "text";
+  if (type === "BOOLEAN") return "boolean";
+  if (integerType.test(type)) return "integer";
+  if (numericType.test(type)) return "number";
+  return null;
+}
+
+function supportsEquality(type: string, value: SqlParameter) {
+  const kind = analysisFilterKind(type);
+  if (kind === "text") return typeof value === "string";
+  if (kind === "boolean") return typeof value === "boolean";
+  if (typeof value !== "number") return false;
+  return kind === "integer" ? Number.isSafeInteger(value) : kind === "number";
 }
 
 export function compileAnalysisPlan(
@@ -36,7 +50,7 @@ export function compileAnalysisPlan(
   const groupColumn = quoteIdentifier(group.name);
   const byMonth = plan.groupBy.bucket === "month";
 
-  if (byMonth && !dateType.test(group.type)) {
+  if (byMonth && !isDateColumn(group.type)) {
     throw new Error(
       `“${group.name}” needs to be a date or timestamp to group by month.`,
     );
@@ -51,7 +65,7 @@ export function compileAnalysisPlan(
   let metricExpression = "COUNT(*)";
   if (plan.metric.aggregation !== "count") {
     const metric = findColumn(plan.metric.column);
-    if (!integerType.test(metric.type) && !numericType.test(metric.type)) {
+    if (!isNumericColumn(metric.type)) {
       throw new Error(
         `“${metric.name}” needs to be numeric for this calculation.`,
       );

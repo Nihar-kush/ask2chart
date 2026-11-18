@@ -1,5 +1,6 @@
 import { Link, useOutletContext } from "react-router";
 import { Button } from "@/components/ui/button";
+import { sampleDatasetId } from "@/lib/workspaceDb";
 import type { WorkspaceDataset } from "@/types/dataset";
 import { DatasetAnalysis } from "./DatasetAnalysis";
 
@@ -9,22 +10,17 @@ export function ChartsPage() {
 
   return (
     <div className="grid min-w-0 gap-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid min-w-0 gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Chart Studio
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Ask a question or run a preset on your active dataset.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          disabled={Boolean(loadingMessage)}
-          onClick={openSample}
-        >
-          Try sample data
-        </Button>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Chart Studio</h1>
+        {dataset?.id !== sampleDatasetId && (
+          <Button
+            variant="outline"
+            disabled={Boolean(loadingMessage)}
+            onClick={openSample}
+          >
+            Try sample data
+          </Button>
+        )}
       </header>
 
       {loadingMessage && (
