@@ -1,5 +1,6 @@
 import { Link, Route, Routes } from "react-router";
 import { ChartsPage } from "@/features/charts/ChartsPage";
+import { DashboardsPage } from "@/features/dashboards/DashboardsPage";
 import { DatasetsPage } from "@/features/datasets/DatasetsPage";
 import { LandingPage } from "@/features/landing/LandingPage";
 import { WorkspaceLayout } from "@/features/workspace/WorkspaceLayout";
@@ -13,6 +14,7 @@ function App() {
         <Route index element={<WorkspaceOverview />} />
         <Route path="datasets" element={<DatasetsPage />} />
         <Route path="charts" element={<ChartsPage />} />
+        <Route path="dashboards" element={<DashboardsPage />} />
       </Route>
       <Route
         path="*"

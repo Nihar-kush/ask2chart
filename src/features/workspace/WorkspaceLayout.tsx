@@ -26,6 +26,9 @@ export function WorkspaceLayout() {
           <NavLink to="charts" className={navLinkClass}>
             Charts
           </NavLink>
+          <NavLink to="dashboards" className={navLinkClass}>
+            Dashboards
+          </NavLink>
         </nav>
       </aside>
       <main className="min-w-0 flex-1 px-6 py-8 md:px-8">

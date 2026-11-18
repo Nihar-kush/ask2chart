@@ -10,7 +10,9 @@ import {
 import { ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SelectField } from "@/components/ui/SelectField";
+import { PinChart } from "@/features/dashboards/PinChart";
 import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
+import { queryDuckDB } from "@/lib/duckdb/query";
 import { saveAnalysis } from "@/lib/workspaceDb";
 import type {
   AnalysisConversation,
@@ -102,6 +104,20 @@ export function DatasetAnalysis({
     if (output && output.source !== "ai") resultRef.current?.focus();
   }, [output]);
 
+  useEffect(() => {
+    const builder = builderRef.current;
+    if (!editing || !builder) return;
+
+    builder.focus({ preventScroll: true });
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    builder.scrollIntoView({
+      behavior: reduceMotion ? "instant" : "smooth",
+      block: "start",
+    });
+  }, [editing]);
+
   async function analyze(task: AnalysisTask) {
     if (
       request.current ||
@@ -163,7 +179,9 @@ export function DatasetAnalysis({
 
       phase = "running";
       setStatus({ source, phase });
-      const result = await runAnalysis(engine, compiled);
+      const result = await runAnalysis(compiled, (sql, parameters) =>
+        queryDuckDB(engine, sql, parameters),
+      );
       signal.throwIfAborted();
       setOutput((previous) => ({
         version: (previous?.version ?? 0) + 1,
@@ -323,21 +341,31 @@ export function DatasetAnalysis({
                 title={output.title}
                 result={output.result}
                 actions={
-                  <Button
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => {
-                      setEditing((current) => ({
-                        revision: (current?.revision ?? 0) + 1,
+                  <>
+                    <Button
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => {
+                        setEditing((current) => ({
+                          revision: (current?.revision ?? 0) + 1,
+                          title: output.title,
+                          plan: output.result.plan,
+                        }));
+                        setIsBuilderOpen(true);
+                      }}
+                    >
+                      Edit chart
+                    </Button>
+                    <PinChart
+                      key={output.version}
+                      chart={{
+                        datasetId: dataset.id,
                         title: output.title,
                         plan: output.result.plan,
-                      }));
-                      setIsBuilderOpen(true);
-                      builderRef.current?.focus();
-                    }}
-                  >
-                    Edit chart
-                  </Button>
+                      }}
+                      disabled={busy}
+                    />
+                  </>
                 }
               />
             </div>
@@ -354,7 +382,7 @@ export function DatasetAnalysis({
                 aria-expanded={isBuilderOpen}
                 aria-controls={builderId}
                 onClick={() => setIsBuilderOpen((open) => !open)}
-                className="group flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-4 py-3 text-left text-sm font-semibold hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2"
+                className="group flex w-full cursor-pointer scroll-mt-4 items-center justify-between gap-2 rounded-xl px-4 py-3 text-left text-sm font-semibold hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2"
               >
                 Build a chart
                 <ChevronDown

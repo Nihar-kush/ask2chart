@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from "dexie";
 import type { SavedAnalysis } from "@/types/analysis";
+import type { Dashboard, DashboardChart } from "@/types/dashboard";
 import type { Dataset, SavedDataset } from "@/types/dataset";
 
 const workspaceId = "default";
@@ -10,6 +11,8 @@ export const workspaceDb = new Dexie("ask2chart") as Dexie & {
   datasets: EntityTable<SavedDataset, "id">;
   datasetFiles: EntityTable<{ id: string; blob: Blob }, "id">;
   analyses: EntityTable<SavedAnalysis, "id">;
+  dashboards: EntityTable<Dashboard, "id">;
+  dashboardCharts: EntityTable<DashboardChart, "id">;
 };
 
 workspaceDb.version(1).stores({
@@ -17,6 +20,11 @@ workspaceDb.version(1).stores({
   datasets: "id, addedAt",
   datasetFiles: "id",
   analyses: "++id, [datasetId+createdAt]",
+});
+
+workspaceDb.version(2).stores({
+  dashboards: "id, createdAt",
+  dashboardCharts: "id, dashboardId, datasetId",
 });
 
 export function analysisHistory(datasetId: string) {
@@ -36,12 +44,14 @@ export async function deleteDataset(id: string) {
     workspaceDb.datasets,
     workspaceDb.datasetFiles,
     workspaceDb.analyses,
+    workspaceDb.dashboardCharts,
     async () => {
       const selection = await workspaceDb.workspaces.get(workspaceId);
       if (selection?.activeDatasetId === id) {
         await workspaceDb.workspaces.delete(workspaceId);
       }
       await analysisHistory(id).delete();
+      await workspaceDb.dashboardCharts.where("datasetId").equals(id).delete();
       await workspaceDb.datasetFiles.delete(id);
       await workspaceDb.datasets.delete(id);
     },

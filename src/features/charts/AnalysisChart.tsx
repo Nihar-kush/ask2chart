@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useImperativeHandle, useRef, type Ref } from "react";
 import { BarChart, LineChart } from "echarts/charts";
 import {
   DatasetComponent,
@@ -8,6 +8,7 @@ import {
 import { getInstanceByDom, init, use as registerECharts } from "echarts/core";
 import { SVGRenderer } from "echarts/renderers";
 import type { AnalysisPlan, AnalysisRow } from "@/types/analysis";
+import { downloadChartPng } from "./chartExport";
 
 registerECharts([
   BarChart,
@@ -23,7 +24,12 @@ const axisNumber = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 1,
 });
 
+export type AnalysisChartHandle = {
+  exportPng: (title: string, metric: string) => Promise<void>;
+};
+
 type AnalysisChartProps = {
+  ref: Ref<AnalysisChartHandle>;
   title: string;
   type: AnalysisPlan["chart"];
   metric: string;
@@ -31,12 +37,27 @@ type AnalysisChartProps = {
 };
 
 export default function AnalysisChart({
+  ref,
   title,
   type,
   metric,
   rows,
 }: AnalysisChartProps) {
   const hostRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      async exportPng(title, metric) {
+        const host = hostRef.current;
+        const svg = host?.querySelector("svg");
+        if (!host || !svg) throw new Error("The chart is still loading.");
+
+        await downloadChartPng(title, metric, svg, getComputedStyle(host));
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
     const host = hostRef.current;

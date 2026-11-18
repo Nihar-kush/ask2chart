@@ -72,7 +72,7 @@ export function SavedDatasets({
                     action="Delete dataset"
                     ariaLabel={`Delete ${dataset.name}`}
                     title={`Delete ${dataset.name}?`}
-                    description="This removes the saved CSV and all of its analysis history from this browser."
+                    description="This removes the saved CSV, its analysis history, and charts pinned from this dataset."
                     disabled={disabled}
                     onConfirm={() => onDelete(dataset.id)}
                   />

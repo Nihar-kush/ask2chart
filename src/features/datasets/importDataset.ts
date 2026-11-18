@@ -1,5 +1,5 @@
-import { DuckDBDataProtocol } from "@duckdb/duckdb-wasm";
 import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
+import { withCsvFile } from "@/lib/duckdb/withCsvFile";
 import type { Dataset } from "@/types/dataset";
 
 export async function importDataset(
@@ -19,25 +19,13 @@ export async function importDataset(
     await connection.query("BEGIN TRANSACTION");
 
     const importStartedAt = performance.now();
-    await database.registerFileHandle(
-      "dataset.csv",
-      file,
-      DuckDBDataProtocol.BROWSER_FILEREADER,
-      true,
-    );
-
-    let importDurationMs: number;
-    try {
+    const importDurationMs = await withCsvFile(database, file, async (path) => {
       await connection.query(
         "CREATE OR REPLACE TABLE dataset AS " +
-          "SELECT *, row_number() OVER () AS __ask2chart_row_id FROM read_csv('dataset.csv')",
+          `SELECT *, row_number() OVER () AS __ask2chart_row_id FROM read_csv('${path}')`,
       );
-      importDurationMs = performance.now() - importStartedAt;
-    } finally {
-      if (!database.isDetached()) {
-        await database.dropFile("dataset.csv");
-      }
-    }
+      return performance.now() - importStartedAt;
+    });
 
     const schema = await connection.query("DESCRIBE dataset");
     const count = await connection.query(
