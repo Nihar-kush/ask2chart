@@ -1,82 +1,154 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
-import type { Dataset, WorkspaceDataset } from "@/types/dataset";
+import type { Dataset, SavedDataset, WorkspaceDataset } from "@/types/dataset";
 import sampleSales from "@/features/datasets/sample-sales.csv?raw";
 import { createDuckDB } from "@/lib/duckdb/createDuckDB";
+import {
+  deleteDataset,
+  readSavedDataset,
+  sampleDatasetId,
+  saveActiveDataset,
+} from "@/lib/workspaceDb";
 
-type ImportResult = {
-  dataset: Dataset | null;
-  error: string | null;
-};
+type DatasetRequest =
+  | { kind: "restore" }
+  | { kind: "saved"; id: string; name: string }
+  | { kind: "import"; id: string; file: File };
 
-function createSampleFile() {
-  return new File([sampleSales], "sample-sales.csv", { type: "text/csv" });
+function sampleRequest(): DatasetRequest {
+  return {
+    kind: "import",
+    id: sampleDatasetId,
+    file: new File([sampleSales], "sample-sales.csv", { type: "text/csv" }),
+  };
 }
 
 export function useWorkspaceDataset(): WorkspaceDataset {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [importingFile, setImportingFile] = useState<File | null>(() =>
-    searchParams.get("sample") === "1" ? createSampleFile() : null,
+  const [pending, setPending] = useState<DatasetRequest | null>(() =>
+    searchParams.get("sample") === "1" ? sampleRequest() : { kind: "restore" },
   );
-  const [result, setResult] = useState<ImportResult | null>(null);
+  const [dataset, setDataset] = useState<Dataset | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [engine] = useState(() =>
-    createDuckDB((error) => setResult({ dataset: null, error: error.message })),
+    createDuckDB((failure) => {
+      setDataset(null);
+      setError(failure.message);
+    }),
   );
 
   useEffect(() => () => engine.dispose(), [engine]);
 
   useEffect(() => {
-    if (!importingFile) return;
+    if (!pending) return;
+    let current = true;
 
-    let isCurrent = true;
-
-    async function load(file: File) {
+    async function load(request: DatasetRequest) {
       try {
+        const source =
+          request.kind === "import"
+            ? request
+            : await readSavedDataset(
+                request.kind === "saved" ? request.id : undefined,
+              );
+        if (!current || !source) return;
+
         const { importDataset } =
           await import("@/features/datasets/importDataset");
-        if (!isCurrent) return;
+        if (!current) return;
 
-        const dataset = await importDataset(engine, file);
-        if (isCurrent) setResult({ dataset, error: null });
-      } catch (error) {
-        if (!isCurrent) return;
+        const loaded = await importDataset(engine, source.file, source.id);
+        if (!current) return;
 
+        let warning = null;
+        if (request.kind !== "restore") {
+          try {
+            await saveActiveDataset(
+              loaded,
+              request.kind === "import" ? request.file : undefined,
+            );
+          } catch {
+            warning =
+              "This CSV is open, but the workspace could not save it as the active dataset. Check browser storage before reloading.";
+          }
+        }
+        if (!current) return;
+        setDataset(loaded);
+        setError(null);
+        setStorageWarning(warning);
+      } catch (failure) {
+        if (!current) return;
         const message =
-          error instanceof Error
-            ? error.message
-            : "Try opening the file again.";
-        setResult((previous) => ({
-          dataset: previous?.dataset ?? null,
-          error: message.split("\n", 1)[0],
-        }));
+          failure instanceof Error ? failure.message.split("\n", 1)[0] : "";
+        setError(
+          request.kind === "import"
+            ? message || "Could not import the CSV. Try opening it again."
+            : "Could not restore the saved dataset. Choose a saved dataset or open the original CSV again.",
+        );
       } finally {
-        if (isCurrent) setImportingFile(null);
+        if (current) setPending(null);
       }
     }
 
-    void load(importingFile);
+    void load(pending);
     return () => {
-      isCurrent = false;
+      current = false;
     };
-  }, [engine, importingFile]);
+  }, [engine, pending]);
 
-  function openFile(file: File) {
-    if (importingFile) return;
-
-    if (searchParams.has("sample")) {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.delete("sample");
-      setSearchParams(nextParams, { replace: true });
-    }
-    setImportingFile(file);
+  function clearSampleParam() {
+    if (!searchParams.has("sample")) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("sample");
+    setSearchParams(nextParams, { replace: true });
   }
+
+  function open(request: DatasetRequest) {
+    if (pending || deleting) return;
+
+    clearSampleParam();
+    setPending(request);
+  }
+
+  async function deleteSaved(id: string) {
+    if (pending || deleting) throw new Error("The workspace is busy.");
+    setDeleting(true);
+    try {
+      await deleteDataset(id);
+      if (dataset?.id === id) {
+        clearSampleParam();
+        engine.dispose();
+        setDataset(null);
+        setError(null);
+        setStorageWarning(null);
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const loadingMessage =
+    pending?.kind === "restore"
+      ? "Restoring workspace…"
+      : pending?.kind === "saved"
+        ? `Opening ${pending.name}…`
+        : pending?.kind === "import"
+          ? `Importing ${pending.file.name}…`
+          : null;
 
   return {
     engine,
-    importingFile,
-    dataset: result?.dataset ?? null,
-    error: importingFile ? null : (result?.error ?? null),
-    openFile,
-    openSample: () => openFile(createSampleFile()),
+    dataset,
+    loadingMessage,
+    error: pending ? null : error,
+    storageWarning: pending ? null : storageWarning,
+    openFile: (file: File) =>
+      open({ kind: "import", id: crypto.randomUUID(), file }),
+    openSample: () => open(sampleRequest()),
+    openSaved: ({ id, name }: SavedDataset) =>
+      open({ kind: "saved", id, name }),
+    deleteSaved,
   };
 }

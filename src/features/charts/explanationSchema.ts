@@ -12,6 +12,7 @@ export const explanationRequestSchema = z
     chartType: z.enum(["bar", "line"]).optional(),
     aggregation: z.enum(["count", "sum", "avg"]).optional(),
     chartLimit: z.number().int().min(1).max(100).optional(),
+    metricSort: z.enum(["asc", "desc"]).optional(),
     groupByMonth: z.boolean().optional(),
     resultGroupCount: z.number().int().min(1).max(100),
     rows: z

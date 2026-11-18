@@ -2,11 +2,10 @@ import { DuckDBDataProtocol } from "@duckdb/duckdb-wasm";
 import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
 import type { Dataset } from "@/types/dataset";
 
-let nextDatasetId = 0;
-
 export async function importDataset(
   engine: DuckDBEngine,
   file: File,
+  id: string,
 ): Promise<Dataset> {
   if (!file.name.toLowerCase().endsWith(".csv")) {
     throw new Error("Choose a file with a .csv extension.");
@@ -55,7 +54,7 @@ export async function importDataset(
 
     await connection.query("COMMIT");
     return {
-      id: ++nextDatasetId,
+      id,
       name: file.name,
       rowCount: Number(count.get(0)?.row_count ?? 0),
       columns,

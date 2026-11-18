@@ -2,10 +2,8 @@ import { useOutletContext } from "react-router";
 import type { WorkspaceDataset } from "@/types/dataset";
 
 export function WorkspaceOverview() {
-  const { dataset, importingFile } = useOutletContext<WorkspaceDataset>();
-  const status = importingFile
-    ? `Importing ${importingFile.name}…`
-    : (dataset?.name ?? "No dataset selected.");
+  const { dataset, loadingMessage } = useOutletContext<WorkspaceDataset>();
+  const status = loadingMessage ?? dataset?.name ?? "No dataset selected.";
 
   return (
     <>

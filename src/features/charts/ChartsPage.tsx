@@ -4,7 +4,7 @@ import type { WorkspaceDataset } from "@/types/dataset";
 import { DatasetAnalysis } from "./DatasetAnalysis";
 
 export function ChartsPage() {
-  const { engine, dataset, importingFile, error, openSample } =
+  const { engine, dataset, loadingMessage, openSample } =
     useOutletContext<WorkspaceDataset>();
 
   return (
@@ -20,27 +20,22 @@ export function ChartsPage() {
         </div>
         <Button
           variant="outline"
-          disabled={Boolean(importingFile)}
+          disabled={Boolean(loadingMessage)}
           onClick={openSample}
         >
           Try sample data
         </Button>
       </header>
 
-      {importingFile && (
+      {loadingMessage && (
         <p
           role="status"
           className="wrap-break-word text-sm text-muted-foreground"
         >
-          Importing {importingFile.name}…
+          {loadingMessage}
         </p>
       )}
-      {error && (
-        <p role="alert" className="wrap-break-word text-sm text-destructive">
-          {error}
-        </p>
-      )}
-      {!importingFile &&
+      {!loadingMessage &&
         (dataset ? (
           <DatasetAnalysis key={dataset.id} dataset={dataset} engine={engine} />
         ) : (

@@ -9,11 +9,13 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
+import { saveAnalysis } from "@/lib/workspaceDb";
 import type {
   AnalysisConversation,
   AnalysisResult,
   CompiledAnalysis,
   PendingClarification,
+  SavedAnalysis,
 } from "@/types/analysis";
 import type { Dataset } from "@/types/dataset";
 import { maxClarificationTurns } from "./analysisApiSchema";
@@ -23,12 +25,14 @@ import { compileAnalysisPlan } from "./compileAnalysisPlan";
 import { requestAnalysis } from "./requestAnalysis";
 import { runAnalysis } from "./runAnalysis";
 import { AskAnalysisForm } from "./AskAnalysisForm";
+import { RecentAnalyses } from "./RecentAnalyses";
 
 const ResultExplanation = lazy(() => import("./ResultExplanation"));
 
 type AnalysisTask =
   | { source: "ai"; conversation: AnalysisConversation }
-  | { source: "preset"; title: string; compiled: CompiledAnalysis };
+  | { source: "preset"; title: string; compiled: CompiledAnalysis }
+  | { source: "saved"; analysis: SavedAnalysis };
 
 type AnalysisStatus = { source: AnalysisTask["source"] } & (
   | { phase: "planning" | "running" | "done" }
@@ -48,6 +52,7 @@ export function DatasetAnalysis({
   const request = useRef<AbortController | null>(null);
   const [isAssistantOpen, setIsAssistantOpen] = useState(true);
   const [status, setStatus] = useState<AnalysisStatus | null>(null);
+  const [saveWarning, setSaveWarning] = useState(false);
   const [followUp, setFollowUp] = useState<PendingClarification | null>(null);
   const [output, setOutput] = useState<{
     version: number;
@@ -80,7 +85,11 @@ export function DatasetAnalysis({
   useEffect(() => () => request.current?.abort(), []);
 
   async function analyze(task: AnalysisTask) {
-    if (request.current) return;
+    if (
+      request.current ||
+      (task.source === "saved" && task.analysis.datasetId !== dataset.id)
+    )
+      return;
 
     const controller = new AbortController();
     request.current = controller;
@@ -89,10 +98,12 @@ export function DatasetAnalysis({
     let phase: "planning" | "running" =
       source === "ai" ? "planning" : "running";
     setStatus({ source, phase });
+    setSaveWarning(false);
 
     try {
       let title: string;
       let compiled: CompiledAnalysis;
+      let question: string | null = null;
       if (task.source === "ai") {
         const { conversation } = task;
         const reply = await requestAnalysis(
@@ -121,7 +132,13 @@ export function DatasetAnalysis({
           return;
         }
         title = reply.title;
+        question = conversation.question;
         compiled = compileAnalysisPlan(reply.plan, dataset.columns);
+      } else if (task.source === "saved") {
+        const { analysis } = task;
+        title = analysis.title;
+        question = analysis.question;
+        compiled = compileAnalysisPlan(analysis.plan, dataset.columns);
       } else {
         ({ title, compiled } = task);
       }
@@ -132,18 +149,34 @@ export function DatasetAnalysis({
       signal.throwIfAborted();
       setOutput((previous) => ({
         version: (previous?.version ?? 0) + 1,
-        question: task.source === "ai" ? task.conversation.question : null,
+        question,
         title,
         result,
       }));
       if (source === "ai") setFollowUp(null);
-      setStatus(source === "ai" ? { source, phase: "done" } : null);
+      if (source !== "saved") {
+        try {
+          await saveAnalysis({
+            datasetId: dataset.id,
+            title,
+            question,
+            plan: result.plan,
+            createdAt: Date.now(),
+          });
+        } catch {
+          if (!signal.aborted) setSaveWarning(true);
+        }
+      }
+      if (!signal.aborted)
+        setStatus(source === "ai" ? { source, phase: "done" } : null);
     } catch (error) {
       if (!signal.aborted) {
         const message =
           phase === "planning" && error instanceof Error
             ? error.message
-            : "Could not run this analysis. Try again.";
+            : source === "saved"
+              ? "Could not rerun this saved analysis. Check the dataset columns or start a new analysis."
+              : "Could not run this analysis. Try again.";
         setStatus({ source, phase: "error", message });
       }
     } finally {
@@ -300,6 +333,21 @@ export function DatasetAnalysis({
               <AnalysisStatusMessage status={status} />
             )}
           </section>
+
+          <RecentAnalyses
+            datasetId={dataset.id}
+            disabled={busy}
+            onRun={(analysis) => void analyze({ source: "saved", analysis })}
+          />
+          {status?.source === "saved" && (
+            <AnalysisStatusMessage status={status} />
+          )}
+          {saveWarning && (
+            <p role="status" className="text-sm text-muted-foreground">
+              The chart is ready, but its analysis could not be saved in this
+              browser.
+            </p>
+          )}
 
           {output && (
             <div id={resultId} tabIndex={-1} className="min-w-0 scroll-mt-4">

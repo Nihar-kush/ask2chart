@@ -29,6 +29,22 @@ export function WorkspaceLayout() {
         </nav>
       </aside>
       <main className="min-w-0 flex-1 px-6 py-8 md:px-8">
+        {dataset.error && (
+          <p
+            role="alert"
+            className="mb-4 wrap-break-word text-sm text-destructive"
+          >
+            {dataset.error}
+          </p>
+        )}
+        {dataset.storageWarning && (
+          <p
+            role="status"
+            className="mb-4 wrap-break-word text-sm text-muted-foreground"
+          >
+            {dataset.storageWarning}
+          </p>
+        )}
         <Outlet context={dataset} />
       </main>
     </div>

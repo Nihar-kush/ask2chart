@@ -6,12 +6,19 @@ export type DatasetColumn = {
 };
 
 export type Dataset = {
-  id: number;
+  id: string;
   name: string;
   rowCount: number;
   columns: DatasetColumn[];
   rowIdColumn: string;
   importDurationMs: number;
+};
+
+export type SavedDataset = Pick<
+  Dataset,
+  "id" | "name" | "rowCount" | "columns"
+> & {
+  addedAt: number;
 };
 
 export type DatasetRow = {
@@ -31,9 +38,12 @@ export type DatasetSort = {
 
 export type WorkspaceDataset = {
   engine: DuckDBEngine;
-  importingFile: File | null;
+  loadingMessage: string | null;
   dataset: Dataset | null;
   error: string | null;
+  storageWarning: string | null;
   openFile: (file: File) => void;
   openSample: () => void;
+  openSaved: (dataset: SavedDataset) => void;
+  deleteSaved: (id: string) => Promise<void>;
 };

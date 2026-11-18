@@ -446,7 +446,29 @@ export function getExplanationFacts(
       {
         id: "missing",
         topic: "values",
-        text: `None of the groups shown have a numeric result for ${metric}.`,
+        text:
+          payload.resultGroupCount === 1
+            ? `The group shown has no numeric result for ${metric}.`
+            : `None of the groups shown have a numeric result for ${metric}.`,
+      },
+    ];
+  }
+
+  if (values.length === 1) {
+    const label = payload.aggregation === "sum" ? `total ${metric}` : metric;
+    const where = first.month === null ? "for" : "in";
+    const single = `${capitalize(label)} was ${first.text} ${where} ${first.label}`;
+    const direction = payload.chartLimit === 1 ? payload.metricSort : undefined;
+
+    return [
+      {
+        id: "single",
+        topic: "values",
+        text: direction
+          ? `${first.label} had the ${direction === "asc" ? "lowest" : "highest"} ${label} in this analysis, at ${first.text}.`
+          : payload.resultGroupCount === 1
+            ? `${single}.`
+            : `${single}, the only group shown with a numeric result.`,
       },
     ];
   }
@@ -469,14 +491,10 @@ export function getExplanationFacts(
   const isCategoryChart = payload.chartType === "bar" && !payload.groupByMonth;
   const facts: Observation[] = [];
   if (ranked[0].value === ranked[ranked.length - 1].value) {
-    const where = first.month === null ? "for" : "in";
     facts.push({
-      id: values.length === 1 ? "single" : "equal",
+      id: "equal",
       topic: "values",
-      text:
-        values.length === 1
-          ? `${capitalize(metric)} was reported only ${where} ${first.label}, at ${first.text}.`
-          : `${capitalize(metric)} was the same across all ${values.length} groups with results, at ${first.text}.`,
+      text: `${capitalize(metric)} was the same across all ${values.length} groups with results, at ${first.text}.`,
     });
     if (isCategoryChart && first.value > 0)
       addCategoryObservations(facts, ranked, payload, metric);

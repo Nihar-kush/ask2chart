@@ -61,8 +61,9 @@ export function ExplanationConsent({
 
           <div className="grid min-w-0 gap-2">
             <p className="text-sm font-medium">
-              Using {payload.rows.length} of {payload.resultGroupCount} result
-              groups
+              {payload.rows.length < payload.resultGroupCount
+                ? `Using ${payload.rows.length} of ${payload.resultGroupCount} result groups`
+                : `Using ${payload.rows.length} result ${payload.rows.length === 1 ? "group" : "groups"}`}
             </p>
             <table className="w-full table-fixed text-left text-sm">
               <caption className="sr-only">

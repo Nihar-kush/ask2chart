@@ -100,7 +100,8 @@ export async function requestExplanation(
   const coverage =
     payload.rows.length < payload.resultGroupCount
       ? `This explanation covers ${payload.rows.length} of the ${payload.resultGroupCount} groups in this chart. `
-      : payload.resultGroupCount === payload.chartLimit
+      : payload.resultGroupCount > 1 &&
+          payload.resultGroupCount === payload.chartLimit
         ? `This chart is limited to ${payload.chartLimit} groups. `
         : "";
   let pendingId = "";

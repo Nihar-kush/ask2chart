@@ -3,17 +3,24 @@ import { useOutletContext } from "react-router";
 import { Button } from "@/components/ui/button";
 import type { WorkspaceDataset } from "@/types/dataset";
 import { DatasetExplorer } from "./DatasetExplorer";
+import { SavedDatasets } from "./SavedDatasets";
 
 export function DatasetsPage() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const { engine, importingFile, dataset, error, openFile, openSample } =
-    useOutletContext<WorkspaceDataset>();
-
-  const status = importingFile
-    ? `Importing ${importingFile.name}…`
-    : dataset
+  const {
+    engine,
+    loadingMessage,
+    dataset,
+    openFile,
+    openSample,
+    openSaved,
+    deleteSaved,
+  } = useOutletContext<WorkspaceDataset>();
+  const status =
+    loadingMessage ??
+    (dataset
       ? `Loaded ${dataset.name} with ${dataset.rowCount.toLocaleString()} rows.`
-      : "No dataset loaded.";
+      : "No dataset loaded.");
 
   return (
     <div className="grid min-w-0 gap-6">
@@ -40,14 +47,14 @@ export function DatasetsPage() {
             }}
           />
           <Button
-            disabled={Boolean(importingFile)}
+            disabled={Boolean(loadingMessage)}
             onClick={() => inputRef.current?.click()}
           >
             Open CSV
           </Button>
           <Button
             variant="outline"
-            disabled={Boolean(importingFile)}
+            disabled={Boolean(loadingMessage)}
             onClick={openSample}
           >
             Try sample data
@@ -58,7 +65,7 @@ export function DatasetsPage() {
       <p
         role="status"
         className={
-          !importingFile && dataset
+          !loadingMessage && dataset
             ? "sr-only"
             : "text-sm text-muted-foreground"
         }
@@ -66,15 +73,13 @@ export function DatasetsPage() {
         {status}
       </p>
 
-      {error && (
-        <p
-          role="alert"
-          className="max-w-2xl wrap-break-word text-sm text-destructive"
-        >
-          {error}
-        </p>
-      )}
-      {!importingFile && dataset && (
+      <SavedDatasets
+        activeId={dataset?.id}
+        disabled={Boolean(loadingMessage)}
+        onOpen={openSaved}
+        onDelete={deleteSaved}
+      />
+      {!loadingMessage && dataset && (
         <DatasetExplorer key={dataset.id} dataset={dataset} engine={engine} />
       )}
     </div>

@@ -45,6 +45,10 @@ export default function ResultExplanation({
       chartType: result.plan.chart,
       aggregation: result.plan.metric.aggregation,
       chartLimit: result.plan.limit,
+      metricSort:
+        result.plan.sort.by === "metric"
+          ? result.plan.sort.direction
+          : undefined,
       groupByMonth: result.plan.groupBy.bucket === "month",
       resultGroupCount: result.rows.length,
       rows: result.rows

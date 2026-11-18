@@ -15,6 +15,15 @@ export type CompiledAnalysis = {
   parameters: SqlParameter[];
 };
 
+export type SavedAnalysis = {
+  id: number;
+  datasetId: string;
+  title: string;
+  question: string | null;
+  plan: AnalysisPlan;
+  createdAt: number;
+};
+
 export type AnalysisRow = {
   group: string;
   value: string | null;
