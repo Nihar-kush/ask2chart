@@ -1,12 +1,11 @@
-import { useRef } from "react";
 import { useOutletContext } from "react-router";
 import { Button } from "@/components/ui/button";
 import type { WorkspaceDataset } from "@/types/dataset";
 import { DatasetExplorer } from "./DatasetExplorer";
+import { ImportCsvButton } from "./ImportCsvButton";
 import { SavedDatasets } from "./SavedDatasets";
 
 export function DatasetsPage() {
-  const inputRef = useRef<HTMLInputElement>(null);
   const {
     engine,
     loadingMessage,
@@ -34,24 +33,12 @@ export function DatasetsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".csv,text/csv"
-            aria-label="Choose a CSV file"
-            hidden
-            onChange={(event) => {
-              const selectedFile = event.currentTarget.files?.[0];
-              event.currentTarget.value = "";
-              if (selectedFile) openFile(selectedFile);
-            }}
-          />
-          <Button
+          <ImportCsvButton
             disabled={Boolean(loadingMessage)}
-            onClick={() => inputRef.current?.click()}
+            onImport={openFile}
           >
             Open CSV
-          </Button>
+          </ImportCsvButton>
           <Button
             variant="outline"
             disabled={Boolean(loadingMessage)}

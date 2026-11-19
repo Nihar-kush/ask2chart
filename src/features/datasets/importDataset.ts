@@ -44,6 +44,7 @@ export async function importDataset(
     return {
       id,
       name: file.name,
+      fileSize: file.size,
       rowCount: Number(count.get(0)?.row_count ?? 0),
       columns,
       rowIdColumn: rowIdColumn.name,

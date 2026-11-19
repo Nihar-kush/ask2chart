@@ -16,11 +16,13 @@ import {
 
 export function DashboardChartGrid({
   dashboardId,
+  focusedChartId,
   engine,
   activeDataset,
   waitingForWorkspace,
 }: {
   dashboardId: string;
+  focusedChartId: string | null;
   engine: DuckDBEngine;
   activeDataset: Dataset | null;
   waitingForWorkspace: boolean;
@@ -61,6 +63,11 @@ export function DashboardChartGrid({
     loadCharts(controller.signal);
     return () => controller.abort();
   }, [chartIds, engine, activeDataset, waitingForWorkspace, retryCount]);
+
+  const chartToFocus = charts?.find(({ id }) => id === focusedChartId)?.id;
+  useEffect(() => {
+    if (chartToFocus) document.getElementById(`chart-${chartToFocus}`)?.focus();
+  }, [chartToFocus]);
 
   if (charts === undefined) {
     return (
@@ -128,7 +135,9 @@ export function DashboardChartGrid({
         {charts.map((chart) => (
           <article
             key={chart.id}
-            className="grid min-w-0 gap-4 rounded-xl border bg-card p-4 text-card-foreground"
+            id={`chart-${chart.id}`}
+            tabIndex={focusedChartId === chart.id ? -1 : undefined}
+            className="grid min-w-0 gap-4 rounded-xl border bg-card p-4 text-card-foreground focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             <PinnedChart
               chart={chart}

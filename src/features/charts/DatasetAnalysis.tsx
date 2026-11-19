@@ -2,6 +2,7 @@ import {
   lazy,
   Suspense,
   useEffect,
+  useEffectEvent,
   useId,
   useMemo,
   useRef,
@@ -13,7 +14,7 @@ import { SelectField } from "@/components/ui/SelectField";
 import { PinChart } from "@/features/dashboards/PinChart";
 import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
 import { queryDuckDB } from "@/lib/duckdb/query";
-import { saveAnalysis } from "@/lib/workspaceDb";
+import { saveAnalysis, workspaceDb } from "@/lib/workspaceDb";
 import type {
   AnalysisConversation,
   AnalysisPlan,
@@ -48,9 +49,13 @@ type AnalysisStatus = { source: AnalysisTask["source"] } & (
 export function DatasetAnalysis({
   dataset,
   engine,
+  initialView,
+  initialAnalysisId,
 }: {
   dataset: Dataset;
   engine: DuckDBEngine;
+  initialView: string | null;
+  initialAnalysisId: number | null;
 }) {
   const builderId = useId();
   const assistantId = useId();
@@ -59,12 +64,15 @@ export function DatasetAnalysis({
   const builderRef = useRef<HTMLButtonElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const assistantRef = useRef<HTMLElement>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<{
     revision: number;
     title: string;
     plan: AnalysisPlan;
   }>();
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(
+    initialView === "assistant",
+  );
   const [status, setStatus] = useState<AnalysisStatus | null>(null);
   const [saveWarning, setSaveWarning] = useState(false);
   const [followUp, setFollowUp] = useState<PendingClarification | null>(null);
@@ -94,11 +102,23 @@ export function DatasetAnalysis({
     presets.findIndex((preset) => preset.compiled),
   );
   const preset = presets[selection];
-  const [isBuilderOpen, setIsBuilderOpen] = useState(!preset);
+  const [isBuilderOpen, setIsBuilderOpen] = useState(
+    initialView === "builder" || !preset,
+  );
   const busy = status?.phase === "planning" || status?.phase === "running";
   const assistantStatus = status?.source === "ai" ? status : null;
 
   useEffect(() => () => request.current?.abort(), []);
+
+  useEffect(() => {
+    if (initialView === "assistant") {
+      assistantRef.current?.querySelector("textarea")?.focus();
+    } else if (initialView === "builder") {
+      builderRef.current?.focus();
+    } else if (initialView === "history") {
+      historyRef.current?.focus();
+    }
+  }, [initialView]);
 
   useEffect(() => {
     if (output && output.source !== "ai") resultRef.current?.focus();
@@ -220,6 +240,31 @@ export function DatasetAnalysis({
       if (request.current === controller) request.current = null;
     }
   }
+
+  const reopenSaved = useEffectEvent(
+    async (id: number, signal: AbortSignal) => {
+      const analysis = await workspaceDb.analyses
+        .get(id)
+        .catch(() => undefined);
+      if (signal.aborted) return;
+      if (analysis?.datasetId === dataset.id) {
+        void analyze({ source: "saved", analysis });
+        return;
+      }
+      setStatus({
+        source: "saved",
+        phase: "error",
+        message: "This saved analysis is unavailable for the active dataset.",
+      });
+    },
+  );
+
+  useEffect(() => {
+    if (initialAnalysisId === null) return;
+    const controller = new AbortController();
+    void reopenSaved(initialAnalysisId, controller.signal);
+    return () => controller.abort();
+  }, [initialAnalysisId]);
 
   function ask(value: string) {
     const conversation = followUp
@@ -464,11 +509,17 @@ export function DatasetAnalysis({
         </aside>
       </div>
 
-      <RecentAnalyses
-        datasetId={dataset.id}
-        disabled={busy}
-        onRun={(analysis) => void analyze({ source: "saved", analysis })}
-      />
+      <div
+        ref={historyRef}
+        tabIndex={-1}
+        className="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2"
+      >
+        <RecentAnalyses
+          datasetId={dataset.id}
+          disabled={busy}
+          onRun={(analysis) => void analyze({ source: "saved", analysis })}
+        />
+      </div>
       {status?.source === "saved" && <AnalysisStatusMessage status={status} />}
     </div>
   );

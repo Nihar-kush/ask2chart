@@ -1,17 +1,12 @@
 import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { useLiveQuery } from "dexie-react-hooks";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/ConfirmAction";
 import { analysisHistory, workspaceDb } from "@/lib/workspaceDb";
 import type { SavedAnalysis } from "@/types/analysis";
+import { analysisDateFormat, useRecentAnalyses } from "./useRecentAnalyses";
 
 const pageSize = 10;
-
-const runDateFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "medium",
-});
 
 export function RecentAnalyses({
   datasetId,
@@ -28,15 +23,7 @@ export function RecentAnalyses({
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [removalError, setRemovalError] = useState(false);
   const [removalMessage, setRemovalMessage] = useState("");
-  const analyses = useLiveQuery(
-    () =>
-      analysisHistory(datasetId)
-        .reverse()
-        .limit(visibleCount + 1)
-        .toArray()
-        .catch(() => null),
-    [datasetId, visibleCount],
-  );
+  const analyses = useRecentAnalyses(datasetId, visibleCount + 1);
 
   async function removeAnalysis({ id, title }: SavedAnalysis) {
     if (removingId !== null) return;
@@ -116,7 +103,7 @@ export function RecentAnalyses({
         ) : (
           <ul className="divide-y">
             {analyses.slice(0, visibleCount).map((analysis) => {
-              const runDate = runDateFormat.format(analysis.createdAt);
+              const runDate = analysisDateFormat.format(analysis.createdAt);
               const isRemoving = removingId === analysis.id;
 
               return (

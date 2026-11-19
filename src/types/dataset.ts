@@ -9,6 +9,7 @@ export type Dataset = {
   id: string;
   name: string;
   rowCount: number;
+  fileSize: number;
   columns: DatasetColumn[];
   rowIdColumn: string;
   importDurationMs: number;

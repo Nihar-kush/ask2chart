@@ -81,6 +81,7 @@ export function DashboardsPage() {
           <DashboardChartGrid
             key={selected.id}
             dashboardId={selected.id}
+            focusedChartId={searchParams.get("chart")}
             engine={engine}
             activeDataset={dataset}
             waitingForWorkspace={Boolean(loadingMessage)}

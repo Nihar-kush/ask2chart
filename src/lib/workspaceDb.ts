@@ -27,6 +27,10 @@ workspaceDb.version(2).stores({
   dashboardCharts: "id, dashboardId, datasetId",
 });
 
+workspaceDb.version(3).stores({
+  dashboardCharts: "id, dashboardId, datasetId, createdAt",
+});
+
 export function analysisHistory(datasetId: string) {
   return workspaceDb.analyses
     .where("[datasetId+createdAt]")
