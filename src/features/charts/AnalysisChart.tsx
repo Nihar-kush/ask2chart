@@ -7,6 +7,7 @@ import {
 } from "echarts/components";
 import { getInstanceByDom, init, use as registerECharts } from "echarts/core";
 import { SVGRenderer } from "echarts/renderers";
+import { useTheme } from "@/components/theme/theme";
 import type { AnalysisPlan, AnalysisRow } from "@/types/analysis";
 import { downloadChartPng } from "./chartExport";
 
@@ -44,6 +45,7 @@ export default function AnalysisChart({
   rows,
 }: AnalysisChartProps) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const { resolvedTheme } = useTheme();
 
   useImperativeHandle(
     ref,
@@ -78,11 +80,6 @@ export default function AnalysisChart({
     const chart = host && getInstanceByDom(host);
     if (!host || !chart) return;
 
-    const style = getComputedStyle(host);
-    const axisColor = style.getPropertyValue("--muted-foreground").trim();
-    const borderColor = style.getPropertyValue("--border").trim();
-    const seriesColor = style.getPropertyValue("--chart-3").trim();
-
     const isMonthly = type === "line";
     const source = rows.map(({ group, value }) => {
       const number = value === null ? NaN : Number(value);
@@ -94,8 +91,6 @@ export default function AnalysisChart({
     chart.setOption(
       {
         animation: false,
-        color: [seriesColor],
-        textStyle: { fontFamily: style.fontFamily },
         useUTC: true,
         dataset: { dimensions: ["x", "value", "group"], source },
         grid: { left: 64, right: 20, top: 18, bottom: 36 },
@@ -103,17 +98,12 @@ export default function AnalysisChart({
           trigger: "axis",
           renderMode: "richText",
           confine: true,
-          borderColor,
-          backgroundColor: style.backgroundColor,
-          textStyle: { color: style.color },
         },
         xAxis: {
           type: isMonthly ? "time" : "category",
           axisTick: { show: false },
-          axisLine: { lineStyle: { color: borderColor } },
           axisLabel: {
-            color: axisColor,
-            formatter: isMonthly ? "{yyyy}-{MM}" : undefined,
+            formatter: isMonthly ? "{yyyy}-{MM}" : (label: string) => label,
             hideOverlap: true,
             overflow: "truncate",
             width: 100,
@@ -123,13 +113,12 @@ export default function AnalysisChart({
           type: "value",
           scale: type === "line",
           axisLabel: {
-            color: axisColor,
             formatter: (value: number) => axisNumber.format(value),
           },
-          splitLine: { lineStyle: { color: borderColor } },
         },
         series: [
           {
+            id: "metric",
             name: metric,
             type,
             encode: {
@@ -142,16 +131,65 @@ export default function AnalysisChart({
             symbolSize: 7,
             lineStyle: { width: 2 },
             emphasis: {
-              // Set the hover color explicitly because ECharts can hide bars and lines with OKLCH
-              itemStyle: { color: style.color, borderColor: style.color },
-              lineStyle: { color: style.color },
+              itemStyle: { color: "inherit" },
+              lineStyle: { width: 3 },
             },
           },
         ],
       },
-      { notMerge: true },
+      { replaceMerge: "series" },
     );
   }, [metric, rows, type]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    const chart = host && getInstanceByDom(host);
+    if (!host || !chart) return;
+
+    const style = getComputedStyle(host);
+    const token = (name: string) => style.getPropertyValue(name).trim();
+    const axisColor = token("--muted-foreground");
+    const borderColor = token("--border");
+    const textColor = token("--card-foreground");
+    const tooltipBackground = token("--popover");
+    const tooltipText = token("--popover-foreground");
+
+    // Merge appearance so switching themes keeps the current chart and dataset
+    chart.setOption(
+      {
+        darkMode: resolvedTheme === "dark",
+        backgroundColor: token("--card"),
+        color: [token("--chart-3")],
+        textStyle: { color: textColor, fontFamily: style.fontFamily },
+        xAxis: {
+          axisLine: { lineStyle: { color: borderColor } },
+          axisLabel: { color: axisColor },
+        },
+        yAxis: {
+          axisLabel: { color: axisColor },
+          splitLine: { lineStyle: { color: borderColor } },
+        },
+        tooltip: {
+          borderColor,
+          backgroundColor: tooltipBackground,
+          textStyle: { color: tooltipText },
+          axisPointer: {
+            lineStyle: { color: axisColor, type: "dashed" },
+            label: { color: tooltipText, backgroundColor: tooltipBackground },
+          },
+        },
+        series: [
+          {
+            id: "metric",
+            type,
+            label: { color: textColor },
+            emphasis: { itemStyle: { borderColor: textColor, borderWidth: 1 } },
+          },
+        ],
+      },
+      { silent: true },
+    );
+  }, [resolvedTheme, type]);
 
   return (
     <div

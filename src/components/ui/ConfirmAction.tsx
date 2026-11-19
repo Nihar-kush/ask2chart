@@ -52,7 +52,7 @@ export function ConfirmAction({
         {action}
       </AlertDialog.Trigger>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-black/40" />
+        <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-overlay" />
         <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl border bg-popover p-5 text-popover-foreground shadow-lg">
           <div className="grid gap-1">
             <AlertDialog.Title className="wrap-break-word text-lg font-semibold">

@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
 
 export function LandingPage() {
   return (
@@ -11,12 +12,15 @@ export function LandingPage() {
           <Link to="/" className="font-semibold tracking-tight">
             Ask2Chart
           </Link>
-          <Link
-            to="/workspace"
-            className="inline-flex h-9 items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2"
-          >
-            Open workspace
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <ThemeSwitcher />
+            <Link
+              to="/workspace"
+              className="inline-flex h-9 items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              Open workspace
+            </Link>
+          </div>
         </nav>
       </header>
 

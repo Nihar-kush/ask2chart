@@ -20,7 +20,7 @@ export function ExplanationConsent({
         Explain result
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40" />
+        <Dialog.Backdrop className="fixed inset-0 z-40 bg-overlay" />
         <Dialog.Popup
           ref={popupRef}
           initialFocus={popupRef}

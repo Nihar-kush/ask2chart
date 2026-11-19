@@ -47,6 +47,7 @@ export async function downloadChartPng(
 ) {
   const { width, height } = svg.getBoundingClientRect();
   if (width <= 0 || height <= 0) throw new Error("The chart is not visible.");
+  const { backgroundColor, color, fontFamily } = style;
 
   // Serialize the rendered SVG so quotes in font names and labels are escaped
   const markup = new XMLSerializer().serializeToString(svg);
@@ -61,16 +62,16 @@ export async function downloadChartPng(
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Could not prepare the image.");
 
-  context.fillStyle = style.backgroundColor;
+  context.fillStyle = backgroundColor;
   context.fillRect(0, 0, canvas.width, canvas.height);
 
   context.scale(2, 2);
   const padding = Math.min(16, width / 4);
-  context.fillStyle = style.color;
-  context.font = `600 16px ${style.fontFamily}`;
+  context.fillStyle = color;
+  context.font = `600 16px ${fontFamily}`;
   context.fillText(title, padding, 25, width - padding * 2);
   if (title !== metric) {
-    context.font = `13px ${style.fontFamily}`;
+    context.font = `13px ${fontFamily}`;
     context.fillText(metric, padding, 44, width - padding * 2);
   }
   context.drawImage(image, 0, headerHeight, width, height);
