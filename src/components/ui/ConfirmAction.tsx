@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +12,7 @@ export function ConfirmAction({
 }: {
   action: string;
   title: string;
-  description: string;
+  description: ReactNode;
   disabled: boolean;
   ariaLabel?: string;
   onConfirm: () => Promise<void>;

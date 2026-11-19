@@ -7,6 +7,21 @@ export async function createDashboard(title: string) {
   return id;
 }
 
+export async function deleteDashboard(id: string) {
+  await workspaceDb.transaction(
+    "rw",
+    workspaceDb.dashboards,
+    workspaceDb.dashboardCharts,
+    async () => {
+      await workspaceDb.dashboardCharts
+        .where("dashboardId")
+        .equals(id)
+        .delete();
+      await workspaceDb.dashboards.delete(id);
+    },
+  );
+}
+
 export async function pinChart(
   dashboard: { id: string } | { title: string },
   chart: Pick<DashboardChart, "datasetId" | "title" | "plan">,

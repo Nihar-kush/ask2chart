@@ -1,12 +1,13 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { Link, useOutletContext, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
+import { ConfirmAction } from "@/components/ui/ConfirmAction";
 import { SelectField } from "@/components/ui/SelectField";
 import { workspaceDb } from "@/lib/workspaceDb";
 import type { WorkspaceDataset } from "@/types/dataset";
 import { DashboardChartGrid } from "./DashboardChartGrid";
 import { DashboardNameDialog } from "./DashboardNameDialog";
-import { createDashboard } from "./dashboardStorage";
+import { createDashboard, deleteDashboard } from "./dashboardStorage";
 
 export function DashboardsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -74,6 +75,25 @@ export function DashboardsPage() {
                 );
                 if (!updated)
                   throw new Error("This dashboard is no longer available.");
+              }}
+            />
+            <ConfirmAction
+              key={selected.id}
+              action="Delete dashboard"
+              ariaLabel={`Delete dashboard ${selected.title}`}
+              title="Delete dashboard?"
+              description={
+                <>
+                  <strong className="wrap-anywhere font-semibold text-popover-foreground">
+                    “{selected.title}”
+                  </strong>{" "}
+                  and all of its pinned charts will be removed from this browser.
+                </>
+              }
+              disabled={false}
+              onConfirm={async () => {
+                await deleteDashboard(selected.id);
+                setSearchParams({}, { replace: true });
               }}
             />
           </div>
