@@ -1,5 +1,6 @@
 import { useOutletContext } from "react-router";
 import { Button } from "@/components/ui/button";
+import { WorkspacePage } from "@/features/workspace/WorkspacePage";
 import type { WorkspaceDataset } from "@/types/dataset";
 import { DatasetExplorer } from "./DatasetExplorer";
 import { ImportCsvButton } from "./ImportCsvButton";
@@ -22,17 +23,10 @@ export function DatasetsPage() {
       : "No dataset loaded.");
 
   return (
-    <div className="grid min-w-0 gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Data Explorer
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Open a CSV to browse, sort, and filter it in your browser.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <WorkspacePage
+      title="Data Explorer"
+      actions={
+        <>
           <ImportCsvButton
             disabled={Boolean(loadingMessage)}
             onImport={openFile}
@@ -46,9 +40,9 @@ export function DatasetsPage() {
           >
             Try sample data
           </Button>
-        </div>
-      </header>
-
+        </>
+      }
+    >
       <p
         role="status"
         className={
@@ -69,6 +63,6 @@ export function DatasetsPage() {
       {!loadingMessage && dataset && (
         <DatasetExplorer key={dataset.id} dataset={dataset} engine={engine} />
       )}
-    </div>
+    </WorkspacePage>
   );
 }

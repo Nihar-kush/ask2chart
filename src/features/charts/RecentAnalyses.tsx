@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/ConfirmAction";
 import { analysisHistory, workspaceDb } from "@/lib/workspaceDb";
@@ -51,17 +51,18 @@ export function RecentAnalyses({
   return (
     <section
       aria-label="Recent analyses"
-      className="grid gap-2 rounded-xl border p-4"
+      className="grid min-w-0 gap-3 rounded-xl border border-panel-border bg-card p-4 sm:p-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2>
           <Button
             variant="ghost"
-            className="font-semibold"
+            className="-ml-2 gap-2 font-semibold"
             aria-expanded={open}
             aria-controls={panelId}
             onClick={() => setOpen((expanded) => !expanded)}
           >
+            <History aria-hidden="true" className="text-muted-foreground" />
             Recent analyses
             <ChevronDown
               aria-hidden="true"
@@ -101,7 +102,7 @@ export function RecentAnalyses({
             Completed analyses for this dataset appear here.
           </p>
         ) : (
-          <ul className="divide-y">
+          <ul className="divide-y divide-panel-border">
             {analyses.slice(0, visibleCount).map((analysis) => {
               const runDate = analysisDateFormat.format(analysis.createdAt);
               const isRemoving = removingId === analysis.id;

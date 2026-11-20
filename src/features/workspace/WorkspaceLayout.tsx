@@ -1,45 +1,67 @@
-import { Link, NavLink, Outlet } from "react-router";
+import {
+  ChartNoAxesCombined,
+  House,
+  LayoutDashboard,
+  Table2,
+} from "lucide-react";
+import { NavLink, Outlet } from "react-router";
+import { BrandLink } from "@/components/BrandLink";
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
+import { useTheme } from "@/components/theme/theme";
 import { useWorkspaceDataset } from "./useWorkspaceDataset";
 
 const navLinkClass =
-  "rounded-md px-3 py-2 text-sm outline-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-sidebar-accent-foreground";
+  "flex min-h-11 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 py-1.5 text-center text-xs leading-tight text-muted-foreground outline-sidebar-ring transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-sidebar-accent-foreground md:min-h-9 md:flex-row md:justify-start md:gap-2.5 md:px-2.5 md:text-left md:text-sm";
+
+const links = [
+  { to: "/workspace", label: "Overview", icon: House, end: true },
+  { to: "datasets", label: "Data Explorer", shortLabel: "Data", icon: Table2 },
+  { to: "charts", label: "Charts", icon: ChartNoAxesCombined },
+  { to: "dashboards", label: "Dashboards", icon: LayoutDashboard },
+];
 
 export function WorkspaceLayout() {
   const dataset = useWorkspaceDataset();
+  const { resolvedTheme } = useTheme();
+  const logoInk = resolvedTheme === "dark" ? "white" : "black";
 
   return (
-    <div className="min-h-dvh md:flex">
-      <aside className="border-b border-sidebar-border bg-sidebar px-4 py-5 text-sidebar-foreground md:sticky md:top-0 md:h-dvh md:w-56 md:shrink-0 md:self-start md:overflow-y-auto md:border-r md:border-b-0">
-        <div className="flex items-center justify-between gap-2">
-          <Link to="/" className="inline-block px-3 font-semibold tracking-tight">
-            Ask2Chart
-          </Link>
+    <div className="flex min-h-dvh flex-col gap-2 p-2 md:flex-row md:gap-3 md:p-3">
+      <aside className="px-1 text-sidebar-foreground md:sticky md:top-3 md:max-h-[calc(100dvh-1.5rem)] md:w-48 md:shrink-0 md:self-start md:overflow-y-auto md:px-2 lg:w-52">
+        <div className="flex items-center justify-between gap-2 px-1">
+          <BrandLink compact />
           <ThemeSwitcher />
         </div>
         <nav
           aria-label="Workspace"
-          className="mt-4 flex flex-wrap gap-1 md:flex-col"
+          className="mt-2 grid grid-cols-4 gap-1 md:mt-5 md:grid-cols-1"
         >
-          <NavLink to="/workspace" end className={navLinkClass}>
-            Overview
-          </NavLink>
-          <NavLink to="datasets" className={navLinkClass}>
-            Data Explorer
-          </NavLink>
-          <NavLink to="charts" className={navLinkClass}>
-            Charts
-          </NavLink>
-          <NavLink to="dashboards" className={navLinkClass}>
-            Dashboards
-          </NavLink>
+          {links.map(({ to, label, shortLabel, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              aria-label={label}
+              className={navLinkClass}
+            >
+              <Icon
+                aria-hidden="true"
+                strokeWidth={1.75}
+                className="size-4 shrink-0"
+              />
+              {shortLabel && <span className="md:hidden">{shortLabel}</span>}
+              <span className={shortLabel ? "hidden md:inline" : undefined}>
+                {label}
+              </span>
+            </NavLink>
+          ))}
         </nav>
       </aside>
-      <main className="min-w-0 flex-1 px-6 py-8 md:px-8">
+      <main className="flex min-w-0 flex-1 flex-col rounded-xl border border-panel-border bg-workspace">
         {dataset.error && (
           <p
             role="alert"
-            className="mb-4 wrap-break-word text-sm text-destructive"
+            className="wrap-break-word border-b border-panel-border px-4 py-3 text-sm text-destructive sm:px-6"
           >
             {dataset.error}
           </p>
@@ -47,12 +69,30 @@ export function WorkspaceLayout() {
         {dataset.storageWarning && (
           <p
             role="status"
-            className="mb-4 wrap-break-word text-sm text-muted-foreground"
+            className="wrap-break-word border-b border-panel-border px-4 py-3 text-sm text-muted-foreground sm:px-6"
           >
             {dataset.storageWarning}
           </p>
         )}
-        <Outlet context={dataset} />
+        {dataset.isRestoring ? (
+          <div className="grid min-h-52 flex-1 place-items-center px-6 py-8">
+            <div
+              role="status"
+              className="grid justify-items-center gap-4 text-center text-sm text-muted-foreground"
+            >
+              <img
+                src={`/brand/ask2chart-mark-${logoInk}.svg`}
+                alt=""
+                width={36}
+                height={36}
+                className="opacity-40"
+              />
+              <p>{dataset.loadingMessage}</p>
+            </div>
+          </div>
+        ) : (
+          <Outlet context={dataset} />
+        )}
       </main>
     </div>
   );

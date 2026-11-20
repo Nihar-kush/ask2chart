@@ -124,7 +124,7 @@ export default function ResultExplanation({
   return (
     <section
       aria-label="Result explanation"
-      className="grid min-w-0 justify-items-start gap-3 rounded-xl border p-4"
+      className="grid min-w-0 justify-items-start gap-3 rounded-xl border border-panel-border bg-card p-4"
     >
       <h2 className="text-sm font-semibold">Result explanation</h2>
       {state.phase === "idle" && (

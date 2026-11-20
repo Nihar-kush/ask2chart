@@ -1,8 +1,11 @@
 import { useLiveQuery } from "dexie-react-hooks";
+import { LayoutDashboard } from "lucide-react";
 import { Link, useOutletContext, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/ConfirmAction";
 import { SelectField } from "@/components/ui/SelectField";
+import { WorkspaceEmptyState } from "@/features/workspace/WorkspaceEmptyState";
+import { WorkspacePage } from "@/features/workspace/WorkspacePage";
 import { workspaceDb } from "@/lib/workspaceDb";
 import type { WorkspaceDataset } from "@/types/dataset";
 import { DashboardChartGrid } from "./DashboardChartGrid";
@@ -28,21 +31,16 @@ export function DashboardsPage() {
     setSearchParams({ dashboard: id }, { replace: true });
   }
 
-  return (
-    <div className="grid min-w-0 gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboards</h1>
-        {dashboards && (
-          <DashboardNameDialog
-            action="New dashboard"
-            label="Dashboard name"
-            onSave={async (title) =>
-              selectDashboard(await createDashboard(title))
-            }
-          />
-        )}
-      </header>
+  const newDashboard = (
+    <DashboardNameDialog
+      action="New dashboard"
+      label="Dashboard name"
+      onSave={async (title) => selectDashboard(await createDashboard(title))}
+    />
+  );
 
+  return (
+    <WorkspacePage title="Dashboards" actions={selected && newDashboard}>
       {dashboards === undefined ? (
         <p role="status" className="text-sm text-muted-foreground">
           Loading dashboards…
@@ -53,7 +51,7 @@ export function DashboardsPage() {
         </p>
       ) : selected ? (
         <>
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-wrap items-end gap-2 border-b border-panel-border pb-4">
             <SelectField
               label="Dashboard"
               options={dashboards.map(({ id, title }) => ({
@@ -87,7 +85,8 @@ export function DashboardsPage() {
                   <strong className="wrap-anywhere font-semibold text-popover-foreground">
                     “{selected.title}”
                   </strong>{" "}
-                  and all of its pinned charts will be removed from this browser.
+                  and all of its pinned charts will be removed from this
+                  browser.
                 </>
               }
               disabled={false}
@@ -108,12 +107,12 @@ export function DashboardsPage() {
           />
         </>
       ) : (
-        <section className="grid max-w-2xl justify-items-start gap-2 rounded-xl border p-5">
-          <h2 className="font-semibold">No saved dashboards</h2>
-          <p className="text-sm text-muted-foreground">
-            Create a dashboard here, or pin a chart from Chart Studio to get
-            started.
-          </p>
+        <WorkspaceEmptyState
+          icon={LayoutDashboard}
+          title="No saved dashboards"
+          description="Create a dashboard to collect your charts, or pin an analysis directly from Chart Studio."
+        >
+          {newDashboard}
           <Button
             variant="outline"
             nativeButton={false}
@@ -121,8 +120,8 @@ export function DashboardsPage() {
           >
             Open Chart Studio
           </Button>
-        </section>
+        </WorkspaceEmptyState>
       )}
-    </div>
+    </WorkspacePage>
   );
 }

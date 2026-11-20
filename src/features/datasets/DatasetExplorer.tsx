@@ -12,7 +12,7 @@ const durationFormat = new Intl.NumberFormat(undefined, {
 });
 
 const fieldClass =
-  "h-9 min-w-0 rounded-lg border border-input bg-background px-3 text-sm outline-ring focus-visible:outline-2";
+  "h-9 min-w-0 rounded-lg border border-input bg-background px-3 text-sm outline-hidden focus-visible:border-ring";
 
 export function DatasetExplorer({
   dataset,
@@ -39,7 +39,7 @@ export function DatasetExplorer({
   return (
     <section aria-labelledby={nameId} className="grid min-w-0 gap-3">
       <div>
-        <h2 id={nameId} className="wrap-break-word font-semibold">
+        <h2 id={nameId} className="wrap-break-word font-medium">
           {dataset.name}
         </h2>
         <p className="text-sm text-muted-foreground tabular-nums">

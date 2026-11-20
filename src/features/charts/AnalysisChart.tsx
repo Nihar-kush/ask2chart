@@ -5,7 +5,12 @@ import {
   GridComponent,
   TooltipComponent,
 } from "echarts/components";
-import { getInstanceByDom, init, use as registerECharts } from "echarts/core";
+import {
+  color,
+  getInstanceByDom,
+  init,
+  use as registerECharts,
+} from "echarts/core";
 import { SVGRenderer } from "echarts/renderers";
 import { useTheme } from "@/components/theme/theme";
 import type { AnalysisPlan, AnalysisRow } from "@/types/analysis";
@@ -46,6 +51,7 @@ export default function AnalysisChart({
 }: AnalysisChartProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
+  const horizontalBars = type === "bar" && rows.length <= 12;
 
   useImperativeHandle(
     ref,
@@ -80,123 +86,144 @@ export default function AnalysisChart({
     const chart = host && getInstanceByDom(host);
     if (!host || !chart) return;
 
-    const isMonthly = type === "line";
-    const source = rows.map(({ group, value }) => {
-      const number = value === null ? NaN : Number(value);
-      // Use UTC month starts so the distance between points shows elapsed time
-      const x = isMonthly ? Date.parse(`${group}-01T00:00:00Z`) : group;
-      return [x, Number.isFinite(number) ? number : null, group];
-    });
-
-    chart.setOption(
-      {
-        animation: false,
-        useUTC: true,
-        dataset: { dimensions: ["x", "value", "group"], source },
-        grid: { left: 64, right: 20, top: 18, bottom: 36 },
-        tooltip: {
-          trigger: "axis",
-          renderMode: "richText",
-          confine: true,
-        },
-        xAxis: {
-          type: isMonthly ? "time" : "category",
-          axisTick: { show: false },
-          axisLabel: {
-            formatter: isMonthly ? "{yyyy}-{MM}" : (label: string) => label,
-            hideOverlap: true,
-            overflow: "truncate",
-            width: 100,
-          },
-        },
-        yAxis: {
-          type: "value",
-          scale: type === "line",
-          axisLabel: {
-            formatter: (value: number) => axisNumber.format(value),
-          },
-        },
-        series: [
-          {
-            id: "metric",
-            name: metric,
-            type,
-            encode: {
-              x: "x",
-              y: "value",
-              itemName: "group",
-              tooltip: ["value"],
-            },
-            barMaxWidth: 64,
-            symbolSize: 7,
-            lineStyle: { width: 2 },
-            emphasis: {
-              itemStyle: { color: "inherit" },
-              lineStyle: { width: 3 },
-            },
-          },
-        ],
-      },
-      { replaceMerge: "series" },
-    );
-  }, [metric, rows, type]);
-
-  useEffect(() => {
-    const host = hostRef.current;
-    const chart = host && getInstanceByDom(host);
-    if (!host || !chart) return;
-
     const style = getComputedStyle(host);
     const token = (name: string) => style.getPropertyValue(name).trim();
     const axisColor = token("--muted-foreground");
     const borderColor = token("--border");
     const textColor = token("--card-foreground");
-    const tooltipBackground = token("--popover");
-    const tooltipText = token("--popover-foreground");
+    const seriesColor = token("--chart-3");
+    const isMonthly = type === "line";
 
-    // Merge appearance so switching themes keeps the current chart and dataset
-    chart.setOption(
-      {
-        darkMode: resolvedTheme === "dark",
-        backgroundColor: token("--card"),
-        color: [token("--chart-3")],
-        textStyle: { color: textColor, fontFamily: style.fontFamily },
-        xAxis: {
-          axisLine: { lineStyle: { color: borderColor } },
-          axisLabel: { color: axisColor },
-        },
-        yAxis: {
-          axisLabel: { color: axisColor },
-          splitLine: { lineStyle: { color: borderColor } },
-        },
-        tooltip: {
-          borderColor,
-          backgroundColor: tooltipBackground,
-          textStyle: { color: tooltipText },
-          axisPointer: {
-            lineStyle: { color: axisColor, type: "dashed" },
-            label: { color: tooltipText, backgroundColor: tooltipBackground },
-          },
-        },
-        series: [
-          {
-            id: "metric",
-            type,
-            label: { color: textColor },
-            emphasis: { itemStyle: { borderColor: textColor, borderWidth: 1 } },
-          },
+    const source = rows.map(({ group, value }) => {
+      const number = value === null ? NaN : Number(value);
+      // UTC month starts preserve the elapsed time between points.
+      const x = isMonthly ? Date.parse(`${group}-01T00:00:00Z`) : group;
+      return [x, Number.isFinite(number) ? number : null, group];
+    });
+
+    const categoryAxis = {
+      type: "category",
+      inverse: horizontalBars,
+      axisTick: { show: false },
+      axisLine: { onZero: false, lineStyle: { color: borderColor } },
+      axisLabel: {
+        color: axisColor,
+        hideOverlap: true,
+        overflow: "truncate",
+        width: horizontalBars ? 80 : 100,
+      },
+    };
+    const valueAxis = {
+      type: "value",
+      scale: isMonthly,
+      show: !horizontalBars,
+      axisLabel: {
+        color: axisColor,
+        formatter: (value: number) => axisNumber.format(value),
+      },
+      splitLine: { lineStyle: { color: borderColor, type: "dashed" } },
+    };
+    const series = {
+      name: metric,
+      type,
+      encode: {
+        x: horizontalBars ? "value" : "x",
+        y: horizontalBars ? "x" : "value",
+        itemName: "group",
+        tooltip: ["value"],
+      },
+      emphasis: { itemStyle: { borderColor: textColor, borderWidth: 1 } },
+    };
+    const areaStyle = {
+      opacity: 0.16,
+      color: {
+        type: "linear",
+        x: 0,
+        y: 0,
+        x2: 0,
+        y2: 1,
+        colorStops: [
+          { offset: 0, color: seriesColor },
+          // An explicit alpha gives the SVG stop a stop-opacity of zero.
+          { offset: 1, color: color.modifyAlpha(seriesColor, 0) },
         ],
       },
-      { silent: true },
+    };
+    const lineStyle = {
+      symbol: "circle",
+      symbolSize: rows.length <= 24 ? 6 : 4,
+      lineStyle: { width: 2 },
+      areaStyle,
+      emphasis: { ...series.emphasis, areaStyle },
+    };
+    const barStyle = {
+      barMaxWidth: horizontalBars ? 12 : 48,
+      itemStyle: { borderRadius: 3 },
+      showBackground: horizontalBars,
+      backgroundStyle: { color: borderColor, borderRadius: 3 },
+      label: {
+        show: horizontalBars,
+        position: "right",
+        color: textColor,
+        formatter: ({ dataIndex }: { dataIndex: number }) => {
+          const value = source[dataIndex]?.[1];
+          const label = rows[dataIndex]?.value;
+          if (typeof value !== "number" || !label) return "";
+          return label.length <= 8 ? label : axisNumber.format(value);
+        },
+      },
+    };
+
+    chart.setOption(
+      {
+        animation: false,
+        useUTC: true,
+        darkMode: resolvedTheme === "dark",
+        backgroundColor: token("--card"),
+        color: [seriesColor],
+        textStyle: { color: textColor, fontFamily: style.fontFamily },
+        dataset: { dimensions: ["x", "value", "group"], source },
+        grid: horizontalBars
+          ? { left: 94, right: 54, top: 8, bottom: 10 }
+          : { left: 53, right: 18, top: 14, bottom: 29 },
+        xAxis: isMonthly
+          ? {
+              type: "time",
+              minInterval: 28 * 24 * 60 * 60 * 1000,
+              axisTick: { show: false },
+              axisLine: { lineStyle: { color: borderColor } },
+              axisLabel: {
+                color: axisColor,
+                formatter: "{MMM} {yy}",
+                hideOverlap: true,
+              },
+            }
+          : horizontalBars
+            ? valueAxis
+            : categoryAxis,
+        yAxis: horizontalBars ? categoryAxis : valueAxis,
+        tooltip: {
+          trigger: "axis",
+          renderMode: "richText",
+          confine: true,
+          borderColor,
+          backgroundColor: token("--popover"),
+          textStyle: { color: token("--popover-foreground") },
+          axisPointer: { lineStyle: { color: axisColor, type: "dashed" } },
+        },
+        series: [{ ...series, ...(isMonthly ? lineStyle : barStyle) }],
+      },
+      { notMerge: true },
     );
-  }, [resolvedTheme, type]);
+  }, [horizontalBars, metric, resolvedTheme, rows, type]);
 
   return (
     <div
       ref={hostRef}
       role="img"
       aria-label={title}
-      className="h-64 min-w-0 bg-card text-card-foreground sm:h-72"
+      className="h-56 min-w-0 overflow-hidden bg-card text-card-foreground sm:h-64"
+      style={horizontalBars ? { minHeight: rows.length * 26 + 24 } : undefined}
     />
   );
 }

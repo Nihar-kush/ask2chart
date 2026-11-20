@@ -8,7 +8,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { ChevronDown, Sparkles } from "lucide-react";
+import {
+  ChartColumn,
+  ChevronDown,
+  FileSpreadsheet,
+  SlidersHorizontal,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SelectField } from "@/components/ui/SelectField";
 import { PinChart } from "@/features/dashboards/PinChart";
@@ -50,11 +56,13 @@ export function DatasetAnalysis({
   dataset,
   engine,
   initialView,
+  initialDraft,
   initialAnalysisId,
 }: {
   dataset: Dataset;
   engine: DuckDBEngine;
   initialView: string | null;
+  initialDraft?: string;
   initialAnalysisId: number | null;
 }) {
   const builderId = useId();
@@ -112,7 +120,11 @@ export function DatasetAnalysis({
 
   useEffect(() => {
     if (initialView === "assistant") {
-      assistantRef.current?.querySelector("textarea")?.focus();
+      const field = assistantRef.current?.querySelector("textarea");
+      if (field) {
+        field.focus();
+        field.setSelectionRange(field.value.length, field.value.length);
+      }
     } else if (initialView === "builder") {
       builderRef.current?.focus();
     } else if (initialView === "history") {
@@ -292,11 +304,21 @@ export function DatasetAnalysis({
 
   return (
     <div className="grid min-w-0 gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="min-w-0 wrap-break-word text-sm">
-          <span className="text-muted-foreground">Active dataset </span>
-          <strong className="font-medium">{dataset.name}</strong>
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-panel-border pb-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <FileSpreadsheet
+            aria-hidden="true"
+            className="size-4 shrink-0 text-muted-foreground"
+          />
+          <p className="grid min-w-0 gap-0.5 text-sm">
+            <span className="text-xs text-muted-foreground">
+              Active dataset
+            </span>
+            <strong className="wrap-break-word font-medium">
+              {dataset.name}
+            </strong>
+          </p>
+        </div>
         <Button
           type="button"
           variant={isAssistantOpen ? "outline" : "default"}
@@ -307,7 +329,9 @@ export function DatasetAnalysis({
           onClick={() => {
             setIsAssistantOpen(!isAssistantOpen);
             if (!isAssistantOpen) {
-              requestAnimationFrame(() => assistantRef.current?.focus());
+              requestAnimationFrame(() =>
+                assistantRef.current?.querySelector("textarea")?.focus(),
+              );
             }
           }}
         >
@@ -319,62 +343,57 @@ export function DatasetAnalysis({
       <div
         className={
           isAssistantOpen
-            ? "grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]"
+            ? "grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)]"
             : "grid min-w-0 gap-5"
         }
       >
-        <div className="grid min-w-0 gap-5">
-          {preset && (
-            <section
-              className="grid gap-3 rounded-xl border p-4"
-              aria-label="Local analysis presets"
-            >
-              <form
-                className="grid gap-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (preset.compiled) {
-                    void analyze({
-                      source: "preset",
-                      title: preset.title,
-                      compiled: preset.compiled,
-                    });
-                  }
-                }}
-              >
-                <div className="grid items-end gap-2 sm:grid-cols-[minmax(0,21rem)_auto] sm:justify-start">
-                  <SelectField
-                    label="Analysis preset"
-                    value={String(selection)}
-                    disabled={busy}
-                    options={presets.map(({ title, compiled }, index) => ({
-                      value: String(index),
-                      label: title,
-                      disabled: !compiled,
-                    }))}
-                    onChange={(value) => {
-                      setSelection(Number(value));
-                      if (status?.source === "preset") setStatus(null);
-                    }}
-                  />
-                  <Button
-                    type="submit"
-                    className="h-9 justify-self-start"
-                    disabled={busy}
+        <aside
+          id={assistantId}
+          ref={assistantRef}
+          hidden={!isAssistantOpen}
+          aria-label="Ask2Chart Assistant"
+          className="min-w-0 space-y-4"
+        >
+          <AskAnalysisForm
+            key={followUp?.conversation.clarifications.length ?? "question"}
+            columns={dataset.columns}
+            initialDraft={followUp ? undefined : initialDraft}
+            followUp={followUp}
+            busy={busy}
+            isPlanning={assistantStatus?.phase === "planning"}
+            isVisible={isAssistantOpen}
+            onSubmit={ask}
+            onCancel={cancelPlan}
+            onStartOver={startOver}
+            status={
+              assistantStatus?.phase === "done" ? (
+                <p role="status" className="text-sm">
+                  Chart ready ·{" "}
+                  <a
+                    className="font-medium underline underline-offset-4"
+                    href={`#${resultId}`}
                   >
-                    Run analysis
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {preset.description}
+                    View chart
+                  </a>
                 </p>
-              </form>
-              {status?.source === "preset" && (
-                <AnalysisStatusMessage status={status} />
-              )}
-            </section>
+              ) : assistantStatus ? (
+                <AnalysisStatusMessage status={assistantStatus} />
+              ) : null
+            }
+          />
+          {output && output.result.rows.length > 0 && (
+            <Suspense fallback={null}>
+              <ResultExplanation
+                key={output.version}
+                title={output.title}
+                question={output.question}
+                result={output.result}
+                disabled={busy}
+              />
+            </Suspense>
           )}
-
+        </aside>
+        <div className="grid min-w-0 gap-5">
           {output && (
             <div
               ref={resultRef}
@@ -416,9 +435,67 @@ export function DatasetAnalysis({
             </div>
           )}
 
+          {preset && (
+            <section
+              className="@container grid min-w-0 gap-4 rounded-xl border border-panel-border bg-card p-4 sm:p-5"
+              aria-label="Quick analysis"
+            >
+              <h2 className="flex items-center gap-2 text-sm font-medium">
+                <ChartColumn
+                  aria-hidden="true"
+                  className="size-4 text-muted-foreground"
+                />
+                Quick analysis
+              </h2>
+              <form
+                className="grid gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (preset.compiled) {
+                    void analyze({
+                      source: "preset",
+                      title: preset.title,
+                      compiled: preset.compiled,
+                    });
+                  }
+                }}
+              >
+                <div className="grid min-w-0 items-end gap-2 @sm:grid-cols-[minmax(0,22rem)_auto] @sm:justify-start">
+                  <SelectField
+                    label="Analysis preset"
+                    value={String(selection)}
+                    disabled={busy}
+                    options={presets.map(({ title, compiled }, index) => ({
+                      value: String(index),
+                      label: title,
+                      disabled: !compiled,
+                    }))}
+                    onChange={(value) => {
+                      setSelection(Number(value));
+                      if (status?.source === "preset") setStatus(null);
+                    }}
+                  />
+                  <Button
+                    type="submit"
+                    className="h-9 justify-self-start"
+                    disabled={busy}
+                  >
+                    Run analysis
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {preset.description}
+                </p>
+              </form>
+              {status?.source === "preset" && (
+                <AnalysisStatusMessage status={status} />
+              )}
+            </section>
+          )}
+
           <section
             aria-label="Build a chart"
-            className="@container min-w-0 rounded-xl border"
+            className="@container min-w-0 rounded-xl border border-panel-border bg-card"
           >
             <h2>
               <button
@@ -427,9 +504,15 @@ export function DatasetAnalysis({
                 aria-expanded={isBuilderOpen}
                 aria-controls={builderId}
                 onClick={() => setIsBuilderOpen((open) => !open)}
-                className="group flex w-full cursor-pointer scroll-mt-4 items-center justify-between gap-2 rounded-xl px-4 py-3 text-left text-sm font-semibold hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2"
+                className="group flex min-h-13 w-full cursor-pointer scroll-mt-4 items-center justify-between gap-2 rounded-xl px-4 py-3 text-left text-sm font-medium hover:bg-muted/60 focus-visible:outline-2 focus-visible:-outline-offset-2 aria-expanded:rounded-b-none sm:px-5"
               >
-                Build a chart
+                <span className="flex items-center gap-2">
+                  <SlidersHorizontal
+                    aria-hidden="true"
+                    className="size-4 text-muted-foreground"
+                  />
+                  Build a chart
+                </span>
                 <ChevronDown
                   aria-hidden="true"
                   className="size-4 shrink-0 text-muted-foreground group-aria-expanded:rotate-180"
@@ -437,7 +520,7 @@ export function DatasetAnalysis({
               </button>
             </h2>
             <div id={builderId} hidden={!isBuilderOpen}>
-              <div className="grid gap-3 border-t p-4">
+              <div className="grid gap-3 border-t border-panel-border p-4 sm:p-5">
                 <ManualChartForm
                   key={editing?.revision}
                   columns={dataset.columns}
@@ -461,52 +544,6 @@ export function DatasetAnalysis({
             </p>
           )}
         </div>
-
-        <aside
-          id={assistantId}
-          ref={assistantRef}
-          tabIndex={-1}
-          hidden={!isAssistantOpen}
-          aria-label="Ask2Chart Assistant"
-          className="min-w-0 space-y-4 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2"
-        >
-          <AskAnalysisForm
-            key={followUp?.conversation.clarifications.length ?? "question"}
-            followUp={followUp}
-            busy={busy}
-            isPlanning={assistantStatus?.phase === "planning"}
-            isVisible={isAssistantOpen}
-            onSubmit={ask}
-            onCancel={cancelPlan}
-            onStartOver={startOver}
-            status={
-              assistantStatus?.phase === "done" ? (
-                <p role="status" className="text-sm">
-                  Chart ready ·{" "}
-                  <a
-                    className="font-medium underline underline-offset-4"
-                    href={`#${resultId}`}
-                  >
-                    View chart
-                  </a>
-                </p>
-              ) : assistantStatus ? (
-                <AnalysisStatusMessage status={assistantStatus} />
-              ) : null
-            }
-          />
-          {output && output.result.rows.length > 0 && (
-            <Suspense fallback={null}>
-              <ResultExplanation
-                key={output.version}
-                title={output.title}
-                question={output.question}
-                result={output.result}
-                disabled={busy}
-              />
-            </Suspense>
-          )}
-        </aside>
       </div>
 
       <div

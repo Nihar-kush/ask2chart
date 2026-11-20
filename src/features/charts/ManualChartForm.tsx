@@ -14,7 +14,7 @@ import {
 } from "./compileAnalysisPlan";
 
 const fieldClass =
-  "h-9 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60";
+  "h-9 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm outline-hidden focus-visible:border-ring disabled:opacity-60";
 
 const chartOrders = [
   { label: "Highest value first", by: "metric", direction: "desc" },

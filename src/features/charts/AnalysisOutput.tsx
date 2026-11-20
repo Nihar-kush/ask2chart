@@ -14,6 +14,21 @@ const durationFormat = new Intl.NumberFormat(undefined, {
   unit: "millisecond",
 });
 
+const monthFormat = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function formatMonthRange(rows: AnalysisRow[]) {
+  if (rows.length === 0) return null;
+  const start = Date.parse(`${rows[0].group}-01T00:00:00Z`);
+  const end = Date.parse(`${rows[rows.length - 1].group}-01T00:00:00Z`);
+  return Number.isFinite(start) && Number.isFinite(end) && start <= end
+    ? monthFormat.formatRange(start, end)
+    : null;
+}
+
 export function AnalysisOutput({
   title,
   result,
@@ -32,6 +47,7 @@ export function AnalysisOutput({
   const { plan, rows, queryDurationMs, sql, parameters } = result;
   const { groupBy, metric, filters } = plan;
   const { groupLabel, metricLabel } = getAnalysisLabels(plan);
+  const dateRange = plan.chart === "line" ? formatMonthRange(rows) : null;
 
   const hasChartValues = rows.some(
     ({ value }) => value !== null && Number.isFinite(Number(value)),
@@ -40,29 +56,27 @@ export function AnalysisOutput({
   return (
     <section
       aria-labelledby={titleId}
-      className="@container grid min-w-0 gap-4"
+      className={cn(
+        "@container grid min-w-0 gap-4",
+        !compact &&
+          "rounded-xl border border-panel-border bg-card p-4 text-card-foreground sm:p-5",
+      )}
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="grid min-w-0 gap-1">
+      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div
+          className={cn(
+            "grid min-w-0 flex-1 gap-1",
+            compact ? "basis-full" : "basis-40",
+          )}
+        >
           <h2
             id={titleId}
-            className="wrap-break-word text-lg font-semibold tracking-tight"
+            className="wrap-break-word text-base font-medium tracking-tight"
           >
             {title}
           </h2>
-          <p
-            role="status"
-            className="text-sm text-muted-foreground tabular-nums"
-          >
-            {datasetName && (
-              <span className="wrap-break-word">
-                {datasetName}
-                {" · "}
-              </span>
-            )}
-            {rows.length.toLocaleString()}{" "}
-            {rows.length === 1 ? "group" : "groups"}
-            {" · "}Query round trip {durationFormat.format(queryDurationMs)}
+          <p className="wrap-break-word text-sm text-muted-foreground">
+            {[metricLabel, dateRange, datasetName].filter(Boolean).join(" · ")}
           </p>
         </div>
         <div className="flex flex-wrap items-start gap-2">
@@ -77,10 +91,10 @@ export function AnalysisOutput({
             }
           />
         </div>
-      </div>
+      </header>
 
       {rows.length === 0 ? (
-        <p className="rounded-xl border p-4 text-sm text-muted-foreground">
+        <p className="rounded-xl border border-panel-border p-4 text-sm text-muted-foreground">
           This analysis returned no groups.
         </p>
       ) : (
@@ -90,12 +104,7 @@ export function AnalysisOutput({
             !compact && "@3xl:grid-cols-[minmax(0,2fr)_minmax(15rem,1fr)]",
           )}
         >
-          <div
-            className={cn(
-              "min-w-0",
-              !compact && "rounded-xl border bg-card p-2",
-            )}
-          >
+          <div className="min-w-0">
             {hasChartValues ? (
               <Suspense
                 fallback={
@@ -122,7 +131,7 @@ export function AnalysisOutput({
             )}
           </div>
           {compact ? (
-            <details className="group border-t">
+            <details className="group border-t border-panel-border">
               <summary className="flex list-none items-center justify-between gap-2 py-2 text-sm font-medium focus-visible:outline-2">
                 Query results
                 <ChevronDown
@@ -148,27 +157,20 @@ export function AnalysisOutput({
         </div>
       )}
 
-      <details
-        className={cn("group", compact ? "border-t" : "rounded-xl border")}
-      >
-        <summary
-          className={cn(
-            "flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium focus-visible:outline-2",
-            compact ? "py-2" : "rounded-xl px-4 py-3",
-          )}
-        >
+      <details className="group border-t border-panel-border">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-2 text-sm font-medium focus-visible:outline-2">
           How this was calculated
           <ChevronDown
             aria-hidden="true"
             className="size-4 group-open:rotate-180"
           />
         </summary>
-        <div
-          className={cn(
-            "grid gap-4 text-sm",
-            compact ? "pt-2" : "border-t p-4",
-          )}
-        >
+        <div className="grid gap-4 pt-2 text-sm">
+          <p className="text-muted-foreground tabular-nums">
+            {rows.length.toLocaleString()}{" "}
+            {rows.length === 1 ? "group" : "groups"}
+            {" · "}Query round trip {durationFormat.format(queryDurationMs)}
+          </p>
           <dl className="grid gap-2">
             <div>
               <dt className="font-medium">Group by</dt>
@@ -242,18 +244,21 @@ function AnalysisResultTable({
       role="region"
       aria-label="Query results"
       tabIndex={0}
-      className="max-h-76 min-w-0 overflow-auto rounded-xl border focus-visible:outline-2 focus-visible:outline-offset-2"
+      className="table-scroll max-h-76 min-w-0 overflow-auto rounded-xl border border-panel-border focus-visible:outline-2 focus-visible:outline-offset-2"
     >
       <table className="w-full border-separate border-spacing-0 text-left text-sm">
         <caption className="sr-only">{title} query results</caption>
         <thead className="sticky top-0 bg-muted">
           <tr>
-            <th scope="col" className="border-b px-3 py-2 font-medium">
+            <th
+              scope="col"
+              className="border-b border-panel-border px-3 py-2 font-medium"
+            >
               {groupLabel}
             </th>
             <th
               scope="col"
-              className="border-b px-3 py-2 text-right font-medium"
+              className="border-b border-panel-border px-3 py-2 text-right font-medium"
             >
               {metricLabel}
             </th>
@@ -261,7 +266,10 @@ function AnalysisResultTable({
         </thead>
         <tbody>
           {rows.map(({ group, value }) => (
-            <tr key={group} className="[&:not(:last-child)>*]:border-b">
+            <tr
+              key={group}
+              className="[&:not(:last-child)>*]:border-b [&>*]:border-panel-border"
+            >
               <th scope="row" className="wrap-break-word px-3 py-2 font-normal">
                 {group}
               </th>

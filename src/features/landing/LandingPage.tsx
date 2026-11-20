@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { BrandLink } from "@/components/BrandLink";
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
 
 export function LandingPage() {
@@ -9,9 +10,7 @@ export function LandingPage() {
           aria-label="Main"
           className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4"
         >
-          <Link to="/" className="font-semibold tracking-tight">
-            Ask2Chart
-          </Link>
+          <BrandLink />
           <div className="flex shrink-0 items-center gap-2">
             <ThemeSwitcher />
             <Link

@@ -39,6 +39,7 @@ export type DatasetSort = {
 
 export type WorkspaceDataset = {
   engine: DuckDBEngine;
+  isRestoring: boolean;
   loadingMessage: string | null;
   dataset: Dataset | null;
   error: string | null;

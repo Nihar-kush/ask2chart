@@ -42,7 +42,7 @@ export function SelectField<Value extends string>({
         <Select.Trigger
           type="button"
           aria-describedby={description ? descriptionId : undefined}
-          className="flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-left text-sm outline-none hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:border-ring disabled:opacity-60"
+          className="flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-left text-sm outline-none hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 data-popup-open:border-ring disabled:opacity-60"
         >
           <Select.Value className="min-w-0 truncate" />
           <Select.Icon className="shrink-0 text-muted-foreground">

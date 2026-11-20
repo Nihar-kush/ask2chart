@@ -1,9 +1,12 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { cn } from "cn";
+import { ChartNoAxesCombined } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/ConfirmAction";
 import { AnalysisOutput } from "@/features/charts/AnalysisOutput";
+import { WorkspaceEmptyState } from "@/features/workspace/WorkspaceEmptyState";
 import type { DuckDBEngine } from "@/lib/duckdb/createDuckDB";
 import { workspaceDb } from "@/lib/workspaceDb";
 import type { DashboardChart } from "@/types/dashboard";
@@ -87,11 +90,11 @@ export function DashboardChartGrid({
 
   if (charts.length === 0) {
     return (
-      <section className="grid max-w-2xl justify-items-start gap-2 rounded-xl border p-5">
-        <h2 className="font-semibold">No charts pinned</h2>
-        <p className="text-sm text-muted-foreground">
-          Open Chart Studio and use Pin to dashboard on any analysis result.
-        </p>
+      <WorkspaceEmptyState
+        icon={ChartNoAxesCombined}
+        title="No charts pinned"
+        description="Open Chart Studio and use Pin to dashboard on any analysis result."
+      >
         <Button
           variant="outline"
           nativeButton={false}
@@ -99,13 +102,18 @@ export function DashboardChartGrid({
         >
           Open Chart Studio
         </Button>
-      </section>
+      </WorkspaceEmptyState>
     );
   }
 
   const hasErrors = charts.some(
     ({ id }) => results[id] && "error" in results[id],
   );
+  const [first, second] = charts;
+  const hasTrendAndBar =
+    charts.length === 2 && first.plan.chart !== second.plan.chart;
+  const orderedCharts =
+    hasTrendAndBar && first.plan.chart === "bar" ? [second, first] : charts;
 
   function retryCharts() {
     setResults((current) =>
@@ -131,13 +139,20 @@ export function DashboardChartGrid({
           </Button>
         )}
       </div>
-      <div className="grid min-w-0 items-start gap-4 @5xl:grid-cols-2">
-        {charts.map((chart) => (
+      <div
+        className={cn(
+          "grid min-w-0 items-start gap-4",
+          hasTrendAndBar
+            ? "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
+            : "@4xl:grid-cols-2",
+        )}
+      >
+        {orderedCharts.map((chart) => (
           <article
             key={chart.id}
             id={`chart-${chart.id}`}
             tabIndex={focusedChartId === chart.id ? -1 : undefined}
-            className="grid min-w-0 gap-4 rounded-xl border bg-card p-4 text-card-foreground focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="grid min-w-0 gap-4 rounded-xl border border-panel-border bg-card p-4 text-card-foreground focus-visible:outline-2 focus-visible:outline-offset-2 sm:p-5"
           >
             <PinnedChart
               chart={chart}
@@ -206,7 +221,7 @@ function PinnedChart({
   return (
     <>
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="min-w-0 wrap-break-word text-lg font-semibold tracking-tight">
+        <h2 className="min-w-0 wrap-break-word text-base font-medium tracking-tight">
           {chart.title}
         </h2>
         <div className="flex flex-wrap items-center gap-2">{actions}</div>

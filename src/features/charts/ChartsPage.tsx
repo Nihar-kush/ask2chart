@@ -1,23 +1,43 @@
-import { Link, useOutletContext, useSearchParams } from "react-router";
+import {
+  Link,
+  useLocation,
+  useOutletContext,
+  useSearchParams,
+} from "react-router";
+import { ChartNoAxesCombined } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WorkspaceEmptyState } from "@/features/workspace/WorkspaceEmptyState";
+import { WorkspacePage } from "@/features/workspace/WorkspacePage";
 import { sampleDatasetId } from "@/lib/workspaceDb";
 import type { WorkspaceDataset } from "@/types/dataset";
+import { maxQuestionLength } from "./analysisApiSchema";
 import { DatasetAnalysis } from "./DatasetAnalysis";
 
 export function ChartsPage() {
   const { engine, dataset, loadingMessage, openSample } =
     useOutletContext<WorkspaceDataset>();
   const [searchParams] = useSearchParams();
+  const state = useLocation().state as {
+    datasetId?: unknown;
+    draft?: unknown;
+  } | null;
   const initialView = searchParams.get("view");
+  const initialDraft =
+    initialView === "assistant" &&
+    state?.datasetId === dataset?.id &&
+    typeof state?.draft === "string"
+      ? state.draft.slice(0, maxQuestionLength)
+      : undefined;
   const analysisId = Number(searchParams.get("analysis"));
   const initialAnalysisId =
     Number.isSafeInteger(analysisId) && analysisId > 0 ? analysisId : null;
 
   return (
-    <div className="grid min-w-0 gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Chart Studio</h1>
-        {dataset?.id !== sampleDatasetId && (
+    <WorkspacePage
+      title="Chart Studio"
+      actions={
+        dataset &&
+        dataset.id !== sampleDatasetId && (
           <Button
             variant="outline"
             disabled={Boolean(loadingMessage)}
@@ -25,9 +45,9 @@ export function ChartsPage() {
           >
             Try sample data
           </Button>
-        )}
-      </header>
-
+        )
+      }
+    >
       {loadingMessage && (
         <p
           role="status"
@@ -43,23 +63,25 @@ export function ChartsPage() {
             dataset={dataset}
             engine={engine}
             initialView={initialView}
+            initialDraft={initialDraft}
             initialAnalysisId={initialAnalysisId}
           />
         ) : (
-          <section className="grid justify-items-start gap-3 rounded-xl border p-5">
-            <h2 className="font-semibold">Choose a dataset to get started</h2>
-            <p className="text-sm text-muted-foreground">
-              Load the sample sales CSV or open an existing CSV in Data
-              Explorer.
-            </p>
-            <Link
-              to="/workspace/datasets"
-              className="text-sm font-medium underline underline-offset-4 focus-visible:outline-2"
+          <WorkspaceEmptyState
+            icon={ChartNoAxesCombined}
+            title="Choose a dataset to get started"
+            description="Try the sample sales data or open a CSV in Data Explorer to build your first chart."
+          >
+            <Button onClick={openSample}>Try sample data</Button>
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link to="../datasets" />}
             >
               Open Data Explorer
-            </Link>
-          </section>
+            </Button>
+          </WorkspaceEmptyState>
         ))}
-    </div>
+    </WorkspacePage>
   );
 }

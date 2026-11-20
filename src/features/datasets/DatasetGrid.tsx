@@ -132,7 +132,7 @@ export function DatasetGrid({ dataset, engine, filter }: DatasetGridProps) {
         role="region"
         aria-label="Dataset rows"
         tabIndex={0}
-        className="h-120 overflow-auto rounded-lg border focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="table-scroll h-120 w-fit max-w-full overflow-auto rounded-xl border border-panel-border bg-card focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <table
           className="table-fixed border-separate border-spacing-0 text-left text-sm"
@@ -169,7 +169,10 @@ export function DatasetGrid({ dataset, engine, filter }: DatasetGridProps) {
               if (!row) {
                 return (
                   <tr key={`pending-${index}`} aria-hidden="true">
-                    <td className="h-9 border-b" colSpan={columnCount} />
+                    <td
+                      className="h-9 border-b border-panel-border"
+                      colSpan={columnCount}
+                    />
                   </tr>
                 );
               }
@@ -180,7 +183,7 @@ export function DatasetGrid({ dataset, engine, filter }: DatasetGridProps) {
                     return (
                       <td
                         key={cell.id}
-                        className="h-9 truncate border-b px-3 tabular-nums"
+                        className="h-9 truncate border-b border-panel-border px-3 tabular-nums"
                         title={value ?? undefined}
                       >
                         {value ?? (
@@ -244,7 +247,7 @@ function DatasetColumnHeader({
     <th
       scope="col"
       aria-sort={sortDirection}
-      className="relative h-14 border-r border-b px-3 pr-5 last:border-r-0"
+      className="relative h-14 border-r border-b border-panel-border px-3 pr-5 last:border-r-0"
     >
       <button
         type="button"

@@ -131,7 +131,7 @@ export function useWorkspaceDataset(): WorkspaceDataset {
 
   const loadingMessage =
     pending?.kind === "restore"
-      ? "Restoring workspace…"
+      ? "Setting up your workspace…"
       : pending?.kind === "saved"
         ? `Opening ${pending.name}…`
         : pending?.kind === "import"
@@ -141,6 +141,7 @@ export function useWorkspaceDataset(): WorkspaceDataset {
   return {
     engine,
     dataset,
+    isRestoring: pending?.kind === "restore",
     loadingMessage,
     error: pending ? null : error,
     storageWarning: pending ? null : storageWarning,

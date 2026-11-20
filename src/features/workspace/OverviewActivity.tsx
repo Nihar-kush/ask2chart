@@ -4,6 +4,7 @@ import {
   ArrowRight,
   ChartColumn,
   ChartLine,
+  History,
   LayoutDashboard,
   type LucideIcon,
 } from "lucide-react";
@@ -26,14 +27,22 @@ export function OverviewRecentAnalyses({ datasetId }: { datasetId: string }) {
   return (
     <section
       aria-labelledby="overview-recent-analyses"
-      className="grid min-w-0 content-start gap-3"
+      className="grid min-w-0 content-start gap-2 border-t border-panel-border pt-3"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="overview-recent-analyses" className="font-semibold">
+        <h2
+          id="overview-recent-analyses"
+          className="flex items-center gap-2 text-sm font-medium"
+        >
+          <History
+            aria-hidden="true"
+            className="size-4 text-muted-foreground"
+          />
           Recent analyses
         </h2>
         <Button
           variant="ghost"
+          size="sm"
           nativeButton={false}
           render={<Link to="charts?view=history" />}
         >
@@ -49,11 +58,11 @@ export function OverviewRecentAnalyses({ datasetId }: { datasetId: string }) {
           Could not read recent analyses.
         </p>
       ) : analyses.length === 0 ? (
-        <p className="border-t pt-3 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Run an analysis in Chart Studio to see it here.
         </p>
       ) : (
-        <ul className="divide-y border-y">
+        <ul className="divide-y divide-panel-border border-t border-panel-border">
           {analyses.map((analysis) => {
             const kind = chartKinds[analysis.plan.chart];
             const runDate = analysisDateFormat.format(analysis.createdAt);
@@ -130,11 +139,28 @@ export function OverviewSavedWork({
   return (
     <section
       aria-labelledby="overview-saved-work"
-      className="grid min-w-0 content-start gap-3"
+      className="grid min-w-0 content-start gap-2 border-t border-panel-border pt-3"
     >
-      <h2 id="overview-saved-work" className="font-semibold">
-        Saved work
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2
+          id="overview-saved-work"
+          className="flex items-center gap-2 text-sm font-medium"
+        >
+          <LayoutDashboard
+            aria-hidden="true"
+            className="size-4 text-muted-foreground"
+          />
+          Saved work
+        </h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          nativeButton={false}
+          render={<Link to="dashboards" />}
+        >
+          View dashboards
+        </Button>
+      </div>
       {saved === undefined ? (
         <p role="status" className="text-sm text-muted-foreground">
           Loading saved work…
@@ -144,17 +170,17 @@ export function OverviewSavedWork({
           Could not read saved work.
         </p>
       ) : !hasSaved ? (
-        <p className="border-t pt-3 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Pin a chart or create a dashboard to see it here.
         </p>
       ) : (
-        <div className="grid gap-4 border-t pt-3">
+        <div className="grid gap-4 border-t border-panel-border pt-3">
           {saved.charts.length > 0 && (
             <div className="grid gap-1">
               <h3 className="text-sm font-medium text-muted-foreground">
                 Pinned charts
               </h3>
-              <ul className="divide-y">
+              <ul className="divide-y divide-panel-border">
                 {saved.charts.map(({ chart, dashboard }) => (
                   <li key={chart.id}>
                     <ActivityLink
@@ -174,7 +200,7 @@ export function OverviewSavedWork({
               <h3 className="text-sm font-medium text-muted-foreground">
                 Dashboards
               </h3>
-              <ul className="divide-y">
+              <ul className="divide-y divide-panel-border">
                 {saved.dashboards.map((dashboard) => (
                   <li key={dashboard.id}>
                     <ActivityLink

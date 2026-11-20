@@ -25,7 +25,7 @@ export function SavedDatasets({
 
   return (
     <section aria-label="Saved datasets" className="grid gap-2">
-      <h2 className="font-semibold">Saved datasets</h2>
+      <h2 className="font-medium">Saved datasets</h2>
       {datasets === undefined ? (
         <p role="status" className="text-sm text-muted-foreground">
           Loading saved datasets…
@@ -39,7 +39,7 @@ export function SavedDatasets({
           CSVs you open appear here.
         </p>
       ) : (
-        <ul className="divide-y rounded-lg border">
+        <ul className="divide-y divide-panel-border rounded-xl border border-panel-border bg-card">
           {datasets.map((dataset) => (
             <li
               key={dataset.id}
